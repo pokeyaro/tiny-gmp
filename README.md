@@ -1,0 +1,49 @@
+# Tiny GMP
+
+A minimal implementation of Go's GMP scheduler model in Zig for educational purposes. Learn how goroutine scheduling works by building it from scratch.
+
+## Quick Start
+
+```bash
+git clone https://github.com/pokeyaro/tiny-gmp
+cd tiny-gmp
+zig build run
+```
+
+## Current Status
+
+This project implements a basic single-threaded scheduler that demonstrates the core concepts of Go's GMP model:
+
+- **G** (Goroutine): Task structure with status management
+- **Scheduling Loop**: Round-robin execution of ready tasks
+- **Status Transitions**: `Ready` → `Running` → `Done`
+
+## Output Example
+
+```text
+=== Tiny-GMP V1 ===
+
+--- Round 1 ---
+Scheduler: Executing G0
+  -> G1: Hello from task1!
+Scheduler: G0 completed
+
+--- Round 2 ---
+Scheduler: Executing G1
+  -> G2: Computing 1+1=2
+Scheduler: G1 completed
+
+--- Round 3 ---
+Scheduler: Executing G2
+  -> G3: Execute shell `ls -l` commands!
+Scheduler: G2 completed
+
+--- Round 4 ---
+
+Scheduler: No more ready goroutines, scheduling finished
+
+=== Final Status ===
+G0: Done
+G1: Done
+G2: Done
+```

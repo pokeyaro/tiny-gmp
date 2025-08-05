@@ -1,0 +1,17 @@
+.{
+    .name = .tiny_gmp,
+    .version = "0.1.0",
+    .description = "A minimal Go GMP scheduler implementation in Zig for educational purposes",
+    .author = "Pokeya",
+    .license = "MIT",
+    .fingerprint = 0xcb8a032624f2a71d, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+        "README.md",
+    },
+}
