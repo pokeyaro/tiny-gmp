@@ -23,6 +23,9 @@ pub const GStatus = enum {
 };
 
 /// G represents a goroutine, the basic unit of execution.
+/// This follows Go's GMP model where G is the goroutine.
+///
+/// Go source: https://github.com/golang/go/blob/master/src/runtime/runtime2.go (search for "type g struct")
 pub const G = struct {
     id: u32, // Unique goroutine ID
     status: GStatus = .Ready, // Current execution status
