@@ -10,7 +10,7 @@ zig-out/
 *.swo
 
 # Log files
-.log
+*.log
 
 # OS files
 .DS_Store
