@@ -1,39 +1,9 @@
-//! Generic LinkedList-based Deque Data Structure
+//! Generic linked-list deque data structure
 //!
-//! **Design Evolution**: This data structure was originally designed for the
-//! global goroutine queue in tiny-gmp's scheduler. We adopted the classic
-//! "data + Node wrapper" doubly-linked list approach to implement batch operations.
-//!
-//! **Challenges Encountered**:
-//! 1. **Dual Data Structure Complexity**: G (goroutine) + Node dual-layer structure,
-//!    requiring Node wrapper for each G
-//!
-//! 2. **Memory Management Dilemma in Batch Operations**:
-//!    ```text
-//!    GlobalQueue: owns Node memory
-//!        ↓ dequeueBatch()
-//!    GlobalRunqBatch: holds Node pointers (but doesn't own memory) // via linked segment transfer
-//!        ↓ enqueueBatch()
-//!    LocalQueue: extracts G pointers, stores in CircularQueue
-//!
-//!    Problem: Who releases the Node memory?
-//!    - GlobalQueue has already "given away" the Nodes
-//!    - GlobalRunqBatch is just a temporary container
-//!    - LocalQueue only wants G pointers, doesn't care about Nodes
-//!    - Result: Memory leak! 💀
-//!    ```
-//!
-//! 3. **Performance Overhead**: Double memory usage and management complexity for every operation
-//!
-//! **Key Discovery**: After studying Go's source code deeply, we found that Go doesn't
-//! use separate Nodes at all! Goroutines directly carry `g.schedlink` fields to form chains:
-//! - Zero additional memory overhead (no Node structures)
-//! - Zero-copy batch operations (pure pointer relinking)
-//! - Clear memory management (who creates G, manages G)
-//!
-//! **Current Status**: This implementation is preserved as a high-quality general-purpose
-//! deque, demonstrating the iterative process of data structure design while serving as
-//! a backup solution for future non-scheduler scenarios.
+//! Dynamic-capacity double-ended queue with O(1) push/pop at both ends,
+//! allocator-backed nodes, and bidirectional iteration for flexible buffering.
+//! Preserved as a general-purpose utility; not used by the scheduler (historical).
+//! See docs/design/linkedlist-deque-history.md for background.
 
 const std = @import("std");
 
