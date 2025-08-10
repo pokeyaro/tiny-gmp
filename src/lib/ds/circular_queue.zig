@@ -1,4 +1,8 @@
-const std = @import("std");
+//! Generic circular queue data structure
+//!
+//! High-performance fixed-capacity queue with compile-time size optimization.
+//! Features O(1) operations, zero-allocation design, and iterator support for
+//! efficient buffering and scheduling applications.
 
 // =====================================================
 // Generic Circular Queue Data Structure
@@ -25,7 +29,7 @@ const std = @import("std");
 pub fn CircularQueue(comptime T: type, comptime capacity: usize) type {
     return struct {
         const Self = @This();
-        const BUFFER_SLOT = 1; // Reserve one slot to distinguish full from empty
+        const BUFFER_SLOT = 1; // Reserve one slot to distinguish full from empty.
         const INTERNAL_CAPACITY = capacity + BUFFER_SLOT;
 
         buffer: [INTERNAL_CAPACITY]?T,
@@ -47,7 +51,8 @@ pub fn CircularQueue(comptime T: type, comptime capacity: usize) type {
         }
 
         /// Get the maximum capacity of the queue.
-        pub fn maxCapacity() usize {
+        pub fn maxCapacity(self: *const Self) usize {
+            _ = self;
             return capacity;
         }
 

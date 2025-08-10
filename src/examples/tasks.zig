@@ -84,8 +84,8 @@ pub fn task20() void {
     std.debug.print("  -> CI/CD: Running e2e tests on staging cluster\n", .{});
 }
 
-// Task function array for round-robin assignment to goroutines
-pub const TASK_FUNCTIONS = [_]fn () void{
+// Task function array for round-robin assignment to goroutines.
+pub const TASK_FUNCTIONS = [_]*const fn () void{
     task1,  task2,  task3,  task4,  task5,
     task6,  task7,  task8,  task9,  task10,
     task11, task12, task13, task14, task15,

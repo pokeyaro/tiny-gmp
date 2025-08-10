@@ -9,174 +9,155 @@ A minimal implementation of **Go's GMP scheduler model** in Zig for educational 
 
 ## 🚀 Quick Start
 
-Requires [Zig 0.14.1+](https://ziglang.org/download/) (⚠️ Zig syntax changes frequently, please use the exact version):
+Requires [Zig **0.14.1**](https://ziglang.org/download/) (exact version; Zig syntax changes frequently).
 
 ```bash
 git clone https://github.com/pokeyaro/tiny-gmp
 cd tiny-gmp
-zig build run
+zig build run  # Debug demo: runs the stress test
 ```
 
-## 📁 Project Structure
+> **Note (Release mode)**
+>
+> Release builds call the production API, but `main.zig` intentionally sets `task_functions = null` as a placeholder and will error.
+>
+> To run a production build, pass your own tasks to `app.start(...)` or modify `main.zig`.
 
-Clean modular architecture with separated concerns:
+## 🎉 What’s New in v0.4.0
+
+### 🌍 Stable Global Runqueue & Batch Intake
+
+- Introduces a **global run queue** coordinating all Ps.
+- **Batch intake** from global → local to reduce contention.
+- Keeps local fast-path (`runnext` + runq); predictable, observable behavior.
+- _Goal:_ Demonstrate **global scheduling** layered on the local-only model.
+
+## ✨ Features (current)
+
+> Single-threaded educational model; no wakeups, no work-stealing, no preemption (yet).
+
+- G (goroutine) with lifecycle: `Ready → Running → Done`
+- P (processor) with `runnext` fast path + local run queue
+- Global run queue with batch distribution into local queues
+- Deterministic demo output & debug prints for education
+
+## 🧱 Architecture
+
+Current architecture for **v0.4.0** — designed for clarity and step-by-step learning (will evolve in future versions):
 
 ```bash
 src/
-├── examples/
-│   └── tasks.zig               # Simulated real-world task functions
+├── examples/                      # Demo applications and stress tests
+│   ├── demo.zig                   # Comprehensive scheduler demonstration
+│   └── tasks.zig                  # Simulated workload functions for testing
+│
 ├── lib/
+│   ├── algo/
+│   │   └── shuffle.zig            # Fisher-Yates shuffling for debug randomization
 │   └── ds/
-│       └── circular_queue.zig  # Generic circular buffer implementation
-├── runtime/
+│       ├── circular_queue.zig     # High-performance fixed-capacity queue
+│       └── linkedlist_deque.zig   # Doubly-linked deque (Historical, deprecated — file comments explain the original design rationale)
+│
+├── runtime/                       # Core GMP scheduler implementation
+│   ├── app.zig                    # Application runtime orchestration
+│   ├── config/
+│   │   └── scheduler_config.zig   # Processor scaling strategies & configuration
 │   ├── core/
-│   │   └── scheduler.zig       # Main scheduling logic
+│   │   ├── executor.zig           # Goroutine execution engine (minimal hooks)
+│   │   ├── lifecycle.zig          # Goroutine creation, scheduling, and cleanup
+│   │   └── scheduler.zig          # Main scheduling algorithms and work distribution
 │   ├── entity/
-│   │   ├── goroutine.zig       # G (Goroutine) implementation
-│   │   └── processor.zig       # P (Processor) implementation
+│   │   ├── goroutine.zig          # Goroutine (G) state management
+│   │   └── processor.zig          # Processor (P) with local queue and runnext
 │   └── queue/
-│       └── local_queue.zig     # Goroutine-specific queue operations
-└── main.zig                    # Entry point
+│       ├── global_queue.zig       # Global scheduler queue with batch operations
+│       └── local_queue.zig        # Per-processor queue with overflow handling
+│
+└── main.zig                       # Entry point with debug/release mode selection
 ```
 
-## ✨ Features
+## 📊 Scheduling Flow (v0.4.0)
 
-This project implements a **multi-processor scheduler** that demonstrates the core concepts of Go's GMP model:
+Below is the end-to-end flow for **tiny-gmp v4**, covering both creation and execution phases:
 
-- **G (Goroutine)**: Task structure with status management and auto-generated IDs
-
-  - Status transitions: `Ready` → `Running` → `Done`
-
-- **P (Processor)**: Local run queues with **runnext optimization**
-
-  - Status transitions: `Idle` ↔ `Running`
-  - Implements Go's fast-path scheduling mechanism
-
-## 🎉 What's New in V0.3.0
-
-### 🏗️ Three-Layer Architecture
-
-- **Data Structure Layer** (`lib/ds/`): Pure circular queue implementation
-- **Business Logic Layer** (`runtime/queue/`): Goroutine-specific queue operations
-- **Entity Layer** (`runtime/entity/`): Processor and Goroutine management
-
-### 🚄 runnext Optimization
-
-Implements Go's actual fast-path scheduling mechanism:
-
-- New goroutines go directly to `runnext` slot
-- Fast path: execute `runnext` goroutines immediately
-- Slow path: fallback to main queue when `runnext` is empty
-- **Passive Replenishment Strategy**: Matches Go's `runqget` implementation
-
-### ✍️ Educational Design
-
-- **Go Source References**: Direct links to Go runtime source code
-- **Design Decision Documentation**: Detailed comments explaining implementation choices
-- **Source Tracking**: See if goroutines come from `runnext` or `runq`
+![Tiny-GMP v4 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v4-scheduling-flow@2x.png)
 
 ## 🖥️ Example Output
 
 ```text
-=== Tiny-GMP V3 ===
+=== Tiny-GMP V4 - STRESS TEST ===
 
-=== Initial Assignment ===
-P0: next: G5; queue: [G8, G12, G2]
-P1: next: G6; queue: [G4, G1, G13]
-P2: next: G3; queue: [G11, G9]
-P3: next: G0; queue: [G10, G14]
-P4: next: G7; queue: []
+=== Creating 10000 Goroutines (Testing Overflow Logic) ===
 
---- Round 1 ---
-P0: Executing G5 (from runnext)
-  -> React: Performing virtual DOM diff and re-render
-P0: G5 completed
+=== Scheduler Configuration ===
+Platform: Apple Silicon macOS
+CPU Cores: 10
+Strategy: 1:2 (P=CPU/2)
+Processors: 5 (1:2 scaling)
+===============================
 
---- Round 2 ---
-P0: Executing G8 (from runq)
-  -> Database query: `SELECT * FROM users;`
-P0: G8 completed
-
---- Round 3 ---
-P0: Executing G12 (from runq)
-  -> React: Performing virtual DOM diff and re-render
-P0: G12 completed
-
---- Round 4 ---
-P0: Executing G2 (from runq)
-  -> Database query: `SELECT * FROM users;`
-P0: G2 completed
-
---- Round 5 ---
-P1: Executing G6 (from runnext)
-  -> Logging system metrics to Prometheus
-P1: G6 completed
-
---- Round 6 ---
-P1: Executing G4 (from runq)
-  -> Establishing secure WebSocket connection
-P1: G4 completed
-
---- Round 7 ---
-P1: Executing G1 (from runq)
-  -> Hello from task1!
-P1: G1 completed
-
---- Round 8 ---
-P1: Executing G13 (from runq)
-  -> Encrypting file with AES-256
-P1: G13 completed
-
---- Round 9 ---
-P2: Executing G3 (from runnext)
-  -> Hello from task1!
-P2: G3 completed
-
---- Round 10 ---
-P2: Executing G11 (from runq)
-  -> Image processing: resize 1920x1080 -> 640x480
-P2: G11 completed
-
---- Round 11 ---
-P2: Executing G9 (from runq)
-  -> CI/CD: Running e2e tests on staging cluster
-P2: G9 completed
-
---- Round 12 ---
-P3: Executing G0 (from runnext)
-  -> CI/CD: Running e2e tests on staging cluster
-P3: G0 completed
-
---- Round 13 ---
-P3: Executing G10 (from runq)
-  -> Vite: Triggering hot module replacement for App.vue
-P3: G10 completed
-
---- Round 14 ---
-P3: Executing G14 (from runq)
-  -> Logging system metrics to Prometheus
-P3: G14 completed
-
---- Round 15 ---
-P4: Executing G7 (from runnext)
-  -> Cleaning up temporary cache files
-P4: G7 completed
-
-Scheduler: All processors idle, scheduling finished
-
-=== Final Status ===
-P0: 0 tasks remaining
-P1: 0 tasks remaining
-P2: 0 tasks remaining
-P3: 0 tasks remaining
-P4: 0 tasks remaining
+Scheduler initialized with 5 processors
+Created G1 with task1
+Created G2 with task2
+Created G3 with task3
+Created G4 with task4
+Created G5 with task5
+Created G6 with task6
+Created G7 with task7
+Created G8 with task8
+Created G9 with task9
+Created G10 with task10
+... creating goroutines G11 to G9990 ...
+Transferred 129 goroutines from P0 to global queue
+Transferred 129 goroutines from P1 to global queue
+Transferred 129 goroutines from P2 to global queue
+Transferred 129 goroutines from P3 to global queue
+Transferred 129 goroutines from P4 to global queue
 ```
+
+See full run in [docs/outputs/example-v0.4.0.txt](./docs/outputs/example-v0.4.0.txt)
+
+## 📜 Version History
+
+### v0.4.0 — Global Runqueue Online
+
+_“Stable runqueues & batch intake.“_
+
+- **Features**: global runq; batch intake; local overflow to global; debug-first behavior.
+- **Design Boundaries**: no work-stealing; no idle-aware wakeups; cooperative (non-preemptive).
+- **Goal**: bridge per-P scheduling with system-wide coordination.
+
+### v0.3.0 — Local Runqueues Only + Modular Architecture
+
+_“Per-P scheduling with runnext fast path, no global handoff; refactored into modular files.”_
+
+- **Features**: modular layout (`core/`, `entity/`, `queue/`, `lib/ds/`); `LocalQueue` on `CircularQueue`; `WorkItem` origin tracing; `assignTasksCustom`; stepwise rounds.
+- **Design Boundaries**: no global runq; no work-stealing/wakeups; no preemption/time-slice.
+- **Goal**: solidify local-only model; prepare interfaces for global queue.
+
+### v0.2.0 — Per-P Local Runqueues (runnext + circular runq)
+
+_“Multiple Ps with per-P circular queues and a runnext fast path; round-robin assignment; no global queue.”_
+
+- **Features**: P with `runnext` + circular `runq`; round-robin assign; dequeue prioritizes `runnext`; one G per round for traceability.
+- **Design Boundaries**: no global runq / batch intake / spill; no work-stealing/wakeups; one-shot tasks.
+- **Goal**: establish **per-P semantics** and the **`runnext` fast path**.
+
+### v0.1.0 — Single-Threaded Fixed Queue
+
+_“Single loop over a fixed G array; no P, no queues.“_
+
+- **Features**: fixed `[3]G` one-shot tasks; scan → first `.Ready` → run → `.Done`; one G per cycle.
+- **Design Boundaries**: no P; no local/global run queues; no work-stealing.
+- **Goal**: establish the **G lifecycle** and the **minimal mental model**.
 
 ## 🛣️ Roadmap
 
-- **V0.1.0**: Basic single-threaded scheduler with fixed goroutine array
-- **V0.2.0**: Multi-processor (P) architecture with local run queues
-- **v0.3.0**: Major refactor with processor optimization (runnext fast-path slot + runq queue) and clean modular architecture
+- **v0.5.0** — Idle-Aware Wakeups
+- **v0.6.0** — Work Stealing
+- **v0.7.0** — Time-slice / Yield
+
+Long-term: align closer with Go runtime's GMP while keeping code educational and minimal.
 
 ## 📚 License
 
