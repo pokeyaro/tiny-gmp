@@ -29,7 +29,7 @@ zig build run  # Debug demo: runs the stress test
 
 - Introduces a **global run queue** coordinating all Ps.
 - **Batch intake** from global → local to reduce contention.
-- Keeps local fast-path (`runnext` + runq); predictable, observable behavior.
+- Keeps local fast-path (`runnext` + `runq`); predictable, observable behavior.
 - _Goal:_ Demonstrate **global scheduling** layered on the local-only model.
 
 ## ✨ Features (current)
