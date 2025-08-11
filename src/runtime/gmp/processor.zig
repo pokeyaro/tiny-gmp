@@ -1,4 +1,4 @@
-//! Processor entity implementation (P in GMP model)
+//! Processor implementation (P in GMP model)
 //!
 //! Logical processor that manages local goroutine scheduling with fast-path optimization.
 //! Features runnext slot for newly created goroutines and local run queue for efficient

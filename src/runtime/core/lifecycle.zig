@@ -5,8 +5,8 @@
 
 const std = @import("std");
 const scheduler = @import("scheduler.zig");
-const goroutine = @import("../entity/goroutine.zig");
-const processor = @import("../entity/processor.zig");
+const goroutine = @import("../gmp/goroutine.zig");
+const processor = @import("../gmp/processor.zig");
 
 const schedt = scheduler.schedt;
 const G = goroutine.G;

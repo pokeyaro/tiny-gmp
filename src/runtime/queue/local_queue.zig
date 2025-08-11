@@ -5,7 +5,7 @@
 //! global queue and efficient goroutine storage with overflow management.
 
 const std = @import("std");
-const goroutine = @import("../entity/goroutine.zig");
+const goroutine = @import("../gmp/goroutine.zig");
 const circular_queue = @import("../../lib/ds/circular_queue.zig");
 const global_queue = @import("global_queue.zig");
 

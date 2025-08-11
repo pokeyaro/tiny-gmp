@@ -1,4 +1,4 @@
-//! Goroutine entity implementation (G in GMP model)
+//! Goroutine implementation (G in GMP model)
 //!
 //! Basic execution unit with complete lifecycle management following Go's design.
 //! Features status tracking, task execution, and scheduler queue linking for

@@ -5,8 +5,8 @@
 //! with comprehensive debug support and performance monitoring capabilities.
 
 const std = @import("std");
-const goroutine = @import("../../entity/goroutine.zig");
-const processor = @import("../../entity/processor.zig");
+const goroutine = @import("../../gmp/goroutine.zig");
+const processor = @import("../../gmp/processor.zig");
 const local_queue = @import("../../queue/local_queue.zig");
 const global_queue = @import("../../queue/global_queue.zig");
 const scheduler_config = @import("../../config/scheduler_config.zig");

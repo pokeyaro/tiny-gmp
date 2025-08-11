@@ -5,7 +5,7 @@
 //! with overflow handling and load balancing capabilities.
 
 const std = @import("std");
-const goroutine = @import("../entity/goroutine.zig");
+const goroutine = @import("../gmp/goroutine.zig");
 
 // Import types
 const G = goroutine.G;

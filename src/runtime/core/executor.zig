@@ -5,7 +5,7 @@
 //! and context-aware execution with detailed logging and metrics collection.
 
 const std = @import("std");
-const goroutine = @import("../entity/goroutine.zig");
+const goroutine = @import("../gmp/goroutine.zig");
 
 const G = goroutine.G;
 

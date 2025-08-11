@@ -66,7 +66,7 @@ src/
 │   │   ├── executor.zig           # Goroutine execution engine (minimal hooks)
 │   │   ├── lifecycle.zig          # Goroutine creation, scheduling, and cleanup
 │   │   └── scheduler.zig          # Main scheduling algorithms and work distribution
-│   ├── entity/
+│   ├── gmp/
 │   │   ├── goroutine.zig          # Goroutine (G) state management
 │   │   └── processor.zig          # Processor (P) with local queue and runnext
 │   └── queue/
@@ -131,7 +131,7 @@ _“Stable runqueues & batch intake.“_
 
 _“Per-P scheduling with runnext fast path, no global handoff; refactored into modular files.”_
 
-- **Features**: modular layout (`core/`, `entity/`, `queue/`, `lib/ds/`); `LocalQueue` on `CircularQueue`; `WorkItem` origin tracing; `assignTasksCustom`; stepwise rounds.
+- **Features**: modular layout (`core/`, `gmp/`, `queue/`, `lib/ds/`); `LocalQueue` on `CircularQueue`; `WorkItem` origin tracing; `assignTasksCustom`; stepwise rounds.
 - **Design Boundaries**: no global runq; no work-stealing/wakeups; no preemption/time-slice.
 - **Goal**: solidify local-only model; prepare interfaces for global queue.
 
