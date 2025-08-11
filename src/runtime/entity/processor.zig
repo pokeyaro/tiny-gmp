@@ -47,6 +47,11 @@ pub const P = struct {
     /// Fast-path slot for next G (corresponds to Go's runnext).
     runnext: ?*G = null,
 
+    /// Link to next processor in intrusive linked list.
+    /// Corresponds to Go's P.link field (used for pidle etc.).
+    /// null when P is not in any linked list.
+    link: ?*P = null,
+
     /// Create a new processor with an empty run queue and a unique ID.
     pub fn init(pid: u32) P {
         return P{
@@ -54,6 +59,7 @@ pub const P = struct {
             .status = .Idle,
             .runq = LocalQueue.init(),
             .runnext = null,
+            .link = null,
         };
     }
 
