@@ -65,9 +65,6 @@ src/
 │   ├── core
 │   │   ├── executor.zig           # Goroutine execution engine (minimal hooks)
 │   │   ├── lifecycle.zig          # Goroutine creation, scheduling, and cleanup
-<<<<<<< HEAD
-│   │   └── scheduler.zig          # Main scheduling algorithms and work distribution
-=======
 │   │   └── scheduler              # Main scheduling algorithms and work distribution
 │   │       ├── basics.zig
 │   │       ├── ctor.zig
@@ -75,7 +72,6 @@ src/
 │   │       ├── mod.zig
 │   │       ├── runq_global_ops.zig
 │   │       └── runq_local_ops.zig
->>>>>>> f9963a9 (feat(runtime): add tg.zig umbrella module for stable imports)
 │   ├── gmp/
 │   │   ├── goroutine.zig          # Goroutine (G) state management
 │   │   └── processor.zig          # Processor (P) with local queue and runnext
