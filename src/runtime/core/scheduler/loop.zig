@@ -58,6 +58,22 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
                     std.debug.print("P{}: {} tasks remaining\n", .{ p.getID(), p.totalGoroutines() });
                 }
             }
+
+            if (self.debug_mode) {
+                std.debug.print("\n=== Idle Processor Management ===\n", .{});
+            }
+
+            // Mark all processors without work as idle.
+            for (self.processors) |*p| {
+                if (!p.hasWork()) {
+                    self.pidleput(p);
+                }
+            }
+
+            if (self.debug_mode) {
+                std.debug.print("Total idle processors: {}\n", .{self.getIdleCount()});
+                std.debug.print("Idle stack empty: {}\n", .{self.pidleEmpty()});
+            }
         }
 
         /// Check if there's any work to do across all processors and global queue.

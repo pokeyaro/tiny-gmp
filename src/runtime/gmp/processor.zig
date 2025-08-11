@@ -132,6 +132,21 @@ pub const P = struct {
         return queue_size + runnext_size;
     }
 
+    /// Link this processor to another processor (for idle stack).
+    pub fn linkTo(self: *P, next: ?*P) void {
+        self.link = next;
+    }
+
+    /// Clear the processor link.
+    pub fn clearLink(self: *P) void {
+        self.link = null;
+    }
+
+    /// Check if this processor is linked to another.
+    pub fn isLinked(self: *const P) bool {
+        return self.link != null;
+    }
+
     /// Display processor state showing runnext and queue separately.
     /// Output format: P0: next: G5; queue: [G1, G2, G3].
     pub fn display(self: *const P) void {
