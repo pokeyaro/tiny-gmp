@@ -1,17 +1,19 @@
+const std = @import("std");
+const tg = @import("../../tg.zig");
+
+// Modules
+const local_queue = tg.queue.local_queue;
+const shuffle = tg.lib.algo.shuffle;
+
+// Types
+const G = tg.G;
+const P = tg.P;
+
 // =====================================================
 // Local Queue Operations
 // =====================================================
 
 pub fn bind(comptime Self: type, comptime WorkItem: type) type {
-    const std = @import("std");
-    const goroutine = @import("../../gmp/goroutine.zig");
-    const processor = @import("../../gmp/processor.zig");
-    const local_queue = @import("../../queue/local_queue.zig");
-    const shuffle = @import("../../../lib/algo/shuffle.zig");
-
-    const G = goroutine.G;
-    const P = processor.P;
-
     return struct {
         /// Put goroutine on local run queue.
         /// Uses the runnext optimization: new goroutines go to runnext first.

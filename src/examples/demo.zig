@@ -29,7 +29,7 @@ pub fn runStressTest(allocator: std.mem.Allocator) !void {
 
 /// Stress test with custom output (internal function).
 fn runStressTestWithCustomOutput(config: app.AppConfig, allocator: std.mem.Allocator) !void {
-    const scheduler_mod = @import("../runtime/core/scheduler.zig");
+    const scheduler_mod = @import("../runtime/core/scheduler/mod.zig");
     const lifecycle = @import("../runtime/core/lifecycle.zig");
     const schedt = scheduler_mod.schedt;
 

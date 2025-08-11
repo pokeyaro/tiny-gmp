@@ -5,12 +5,11 @@
 //! work distribution. Provides comprehensive state management and debugging capabilities.
 
 const std = @import("std");
-const goroutine = @import("goroutine.zig");
-const local_queue = @import("../queue/local_queue.zig");
+const tg = @import("../tg.zig");
 
-// Import types
-const G = goroutine.G;
-const LocalQueue = local_queue.LocalQueue;
+// Types
+const G = tg.G;
+const LocalQueue = tg.queue.local_queue.LocalQueue;
 
 // =====================================================
 // P (Processor) Definitions

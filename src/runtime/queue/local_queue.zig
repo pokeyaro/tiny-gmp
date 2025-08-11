@@ -5,14 +5,12 @@
 //! global queue and efficient goroutine storage with overflow management.
 
 const std = @import("std");
-const goroutine = @import("../gmp/goroutine.zig");
-const circular_queue = @import("../../lib/ds/circular_queue.zig");
-const global_queue = @import("global_queue.zig");
+const tg = @import("../tg.zig");
 
-// Import types
-const G = goroutine.G;
-const CircularQueue = circular_queue.CircularQueue;
-const GlobalRunqBatch = global_queue.GlobalRunqBatch;
+// Types
+const G = tg.G;
+const CircularQueue = tg.lib.ds.circular_queue.CircularQueue;
+const GlobalRunqBatch = tg.queue.global_queue.GlobalRunqBatch;
 
 // =====================================================
 // Local Queue - Business Layer Queue for Goroutines

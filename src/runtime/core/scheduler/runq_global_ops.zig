@@ -1,15 +1,15 @@
+const std = @import("std");
+const tg = @import("../../tg.zig");
+
+// Types
+const G = tg.G;
+const P = tg.P;
+
 // =====================================================
 // Global Queue Operations
 // =====================================================
 
 pub fn bind(comptime Self: type) type {
-    const std = @import("std");
-    const goroutine = @import("../../gmp/goroutine.zig");
-    const processor = @import("../../gmp/processor.zig");
-
-    const G = goroutine.G;
-    const P = processor.P;
-
     return struct {
         /// Add a goroutine to the global run queue.
         /// Matches Go's globrunqput() function.

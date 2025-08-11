@@ -4,13 +4,12 @@
 //! Provides both targeted and automatic processor selection for goroutine placement.
 
 const std = @import("std");
-const scheduler = @import("scheduler.zig");
-const goroutine = @import("../gmp/goroutine.zig");
-const processor = @import("../gmp/processor.zig");
+const tg = @import("../tg.zig");
 
-const schedt = scheduler.schedt;
-const G = goroutine.G;
-const P = processor.P;
+// Types
+const schedt = tg.scheduler.schedt;
+const G = tg.G;
+const P = tg.P;
 
 // Global round-robin cursor for selecting target P.
 // Single-threaded demo only; not safe for concurrent newproc calls.

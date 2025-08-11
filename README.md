@@ -62,16 +62,27 @@ src/
 │   ├── app.zig                    # Application runtime orchestration
 │   ├── config/
 │   │   └── scheduler_config.zig   # Processor scaling strategies & configuration
-│   ├── core/
+│   ├── core
 │   │   ├── executor.zig           # Goroutine execution engine (minimal hooks)
 │   │   ├── lifecycle.zig          # Goroutine creation, scheduling, and cleanup
+<<<<<<< HEAD
 │   │   └── scheduler.zig          # Main scheduling algorithms and work distribution
+=======
+│   │   └── scheduler              # Main scheduling algorithms and work distribution
+│   │       ├── basics.zig
+│   │       ├── ctor.zig
+│   │       ├── loop.zig
+│   │       ├── mod.zig
+│   │       ├── runq_global_ops.zig
+│   │       └── runq_local_ops.zig
+>>>>>>> f9963a9 (feat(runtime): add tg.zig umbrella module for stable imports)
 │   ├── gmp/
 │   │   ├── goroutine.zig          # Goroutine (G) state management
 │   │   └── processor.zig          # Processor (P) with local queue and runnext
-│   └── queue/
-│       ├── global_queue.zig       # Global scheduler queue with batch operations
-│       └── local_queue.zig        # Per-processor queue with overflow handling
+│   ├── queue/
+│   │   ├── global_queue.zig       # Global scheduler queue with batch operations
+│   │   └── local_queue.zig        # Per-processor queue with overflow handling
+│   └── tg.zig                     # Umbrella module for stable internal imports
 │
 └── main.zig                       # Entry point with debug/release mode selection
 ```
