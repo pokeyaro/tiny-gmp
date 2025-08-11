@@ -111,4 +111,5 @@ pub const schedt = struct {
     pub usingnamespace @import("runq_global_ops.zig").bind(@This());
     pub usingnamespace @import("runq_local_ops.zig").bind(@This(), WorkItem);
     pub usingnamespace @import("loop.zig").bind(@This(), WorkItem, GSrc);
+    pub usingnamespace @import("pidle_ops.zig").bind(@This());
 };
