@@ -3,7 +3,7 @@
 //! Dynamic-capacity double-ended queue with O(1) push/pop at both ends,
 //! allocator-backed nodes, and bidirectional iteration for flexible buffering.
 //! Preserved as a general-purpose utility; not used by the scheduler (historical).
-//! See docs/design/linkedlist-deque-history.md for background.
+//! See docs/design/en/linkedlist-deque-history.md for background.
 
 const std = @import("std");
 
