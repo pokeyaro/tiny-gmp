@@ -63,15 +63,12 @@ pub const LocalQueue = struct {
     /// Add a batch of goroutines from GlobalRunqBatch to the local queue.
     /// Used when processor receives goroutines from global queue.
     pub fn enqueueBatch(self: *LocalQueue, batch: GlobalRunqBatch) !void {
-        // Iterate through the G.schedlink chain
         var current = batch.batch_head;
         while (current) |g| {
-            const next = g.schedlink; // Save next goroutine.
-            g.clearLink(); // Clear link (entering array-based queue).
-
-            const success = self.enqueue(g);
-            if (!success) return error.LocalQueueFull;
-
+            const next = g.schedlink;
+            const ok = self.enqueue(g);
+            if (!ok) return error.LocalQueueFull;
+            g.clearLink();
             current = next;
         }
     }
