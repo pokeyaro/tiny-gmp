@@ -21,6 +21,11 @@ pub fn bind(comptime Self: type) type {
             return self.runq.size();
         }
 
+        /// Get the total number of processors in the scheduler.
+        pub fn processorCount(self: *const Self) u32 {
+            return self.nproc;
+        }
+
         /// Get current idle processor count.
         pub fn getIdleCount(self: *const Self) u32 {
             return self.npidle.load(.seq_cst);
@@ -33,10 +38,12 @@ pub fn bind(comptime Self: type) type {
 
         /// Display scheduler state for debugging.
         pub fn display(self: *const Self) void {
+            const proc_count = self.processorCount();
             const idle_count = self.getIdleCount();
+            const g_count = self.runq.size();
             std.debug.print("=== Scheduler Status ===\n", .{});
-            std.debug.print("Processors: {}, Idle: {}\n", .{ self.nproc, idle_count });
-            std.debug.print("Global goroutines: {}\n", .{self.runq.size()});
+            std.debug.print("Processors: {}, Idle: {}\n", .{ proc_count, idle_count });
+            std.debug.print("Global goroutines: {}\n", .{g_count});
             self.runq.display();
 
             for (self.processors, 0..) |*p, i| {

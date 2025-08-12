@@ -32,33 +32,36 @@ pub fn bind(comptime Self: type) type {
         pub fn globrunqget(self: *Self, pp: *P, max: usize) ?*G {
             if (self.isEmpty()) return null;
 
-            // Use half of the local capacity as a safety bound.
+            // Use half of the local capacity as a safety bound to prevent overflow.
             const local_cap_half = pp.runq.capacity() / 2;
 
             // Determine the initial candidate batch size.
             var n = self.calculateBatchSize(max, local_cap_half);
 
-            // Tighten with the actual available slots of the local queue.
+            // Check actual available space in target processor's local queue.
             const available = pp.runq.capacity() - pp.runq.size();
+            if (available == 0) return null; // Local queue is full.
+
+            // Ensure we have at least 1 goroutine and don't exceed available space.
+            if (n == 0) n = 1;
             n = @min(n, available);
+            std.debug.assert(n > 0);
 
-            // Defensive: if n == 0, nothing to pull.
-            if (n == 0) return null;
-
-            // We assert the precondition before dequeue; enqueue should not fail.
+            // Safety check: batch size should never exceed available space.
             std.debug.assert(n <= available);
 
-            // Pull a batch from the global queue.
+            // Pull the calculated batch from global queue.
             const batch = self.runq.dequeueBatch(n);
 
-            // Transfer batch to local queue (should not fail given the checks above).
+            // Transfer batch to processor's local queue for future scheduling.
             if (!batch.isEmpty()) {
                 pp.runq.enqueueBatch(batch) catch {
-                    // Truly unreachable if the pre-checks are correct.
+                    // This should never fail due to our capacity checks above.
                     unreachable;
                 };
             }
 
+            // Return the first goroutine for immediate execution.
             return batch.immediate_g;
         }
 
@@ -68,10 +71,11 @@ pub fn bind(comptime Self: type) type {
             const qs = self.runqsize();
             if (qs == 0) return 0;
 
-            var n = qs / self.nproc + 1; // Base on even distribution + 1.
-            if (n > qs / 2) n = qs / 2; // No more than half of global queue.
-            if (max > 0 and n > max) n = max; // Limit only when caller explicitly specifies max.
-            if (n > local_cap_half) n = local_cap_half; // Local half-capacity protection.
+            var n = qs / self.nproc + 1; // Based on even distribution + 1.
+            if (n > qs / 2) n = qs / 2; // Take at most half of the global queue.
+            if (max > 0 and n > max) n = max; // Obey caller’s limit.
+            if (n > local_cap_half) n = local_cap_half; // Guard: don’t overfill local runq.
+            if (n < 1) n = 1; // At least one when qs > 0.
 
             return n;
         }

@@ -90,6 +90,10 @@ pub const schedt = struct {
     /// Thread-safe atomic counter for unique goroutine IDs.
     goidgen: std.atomic.Value(u32),
 
+    // === Runtime State (Go: mainStarted) ===
+    /// True once the scheduler main loop has started (Go's mainStarted).
+    main_started: bool = false,
+
     // === Memory Management ===
 
     /// Allocator for managing dynamic memory.

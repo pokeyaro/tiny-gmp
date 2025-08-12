@@ -57,6 +57,20 @@ pub fn bind(comptime Self: type) type {
             return woken;
         }
 
+        /// Wake one idle processor.
+        /// Pops from the pidle stack (LIFO) and marks it Running. Returns true if woken.
+        ///
+        /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func wakep").
+        pub fn wakep(self: *Self) bool {
+            if (self.pidleget()) |_| { // pidleget() already sets status to .Running
+                if (self.debug_mode) {
+                    std.debug.print("[wake] woke one P (idle={})\n", .{self.getIdleCount()});
+                }
+                return true;
+            }
+            return false;
+        }
+
         // === Core Idle Stack Operations ===
 
         /// Put P onto the idle stack (LIFO).
@@ -74,6 +88,7 @@ pub fn bind(comptime Self: type) type {
             // LIFO push.
             p.linkTo(self.getIdleHead());
             self.setIdleHead(p);
+            p.setOnIdleStack(true);
             self.incrementIdleCount();
 
             if (self.debug_mode) {
@@ -90,6 +105,7 @@ pub fn bind(comptime Self: type) type {
             // LIFO pop.
             self.setIdleHead(p.link);
             p.clearLink();
+            p.setOnIdleStack(false);
             self.decrementIdleCount();
 
             // Set processor state to Running after wakeup.
@@ -104,6 +120,32 @@ pub fn bind(comptime Self: type) type {
         /// Check if idle stack is empty.
         pub fn pidleEmpty(self: *const Self) bool {
             return self.pidle == null;
+        }
+
+        /// Display the idle processor stack for debugging.
+        /// Shows the linked list structure with head indication.
+        /// Output format: "Pidle stack: P2(head) -> P1 -> P0" or "Pidle stack: (empty)".
+        pub fn displayPidle(self: *const Self) void {
+            std.debug.print("Pidle stack: ", .{});
+
+            var node = self.pidle;
+            if (node == null) {
+                std.debug.print("(empty)\n", .{});
+                return;
+            }
+
+            var first = true;
+            while (node) |p| {
+                if (!first) std.debug.print(" -> ", .{});
+                if (first) {
+                    std.debug.print("P{}(head)", .{p.getID()});
+                    first = false;
+                } else {
+                    std.debug.print("P{}", .{p.getID()});
+                }
+                node = p.link;
+            }
+            std.debug.print("\n", .{});
         }
 
         // === Private Helper Methods ===

@@ -15,57 +15,76 @@ const P = tg.P;
 
 pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) type {
     return struct {
-        /// Main scheduling loop - drives the entire scheduler.
-        /// Continuously looks for work and executes goroutines until no work remains.
+        /// Main scheduling loop — orchestrates processor execution.
+        /// Continuously searches for runnable goroutines and dispatches them until no work remains.
         pub fn schedule(self: *Self) void {
+            self.main_started = true;
+            defer self.main_started = false;
+
             if (self.debug_mode) {
                 std.debug.print("=== Scheduler starting with {} processors ===\n", .{self.nproc});
             }
 
             var round: u32 = 1;
 
-            while (hasWork(self)) {
+            while (true) {
+                // Early exit: no global work and all P are parked on pidle.
+                if (self.runq.isEmpty() and self.getIdleCount() >= self.nproc) {
+                    if (self.debug_mode) {
+                        std.debug.print("All processors idle and no work, scheduler stopping\n", .{});
+                    }
+                    break;
+                }
+
                 if (self.debug_mode) {
                     std.debug.print("\n--- Round {} ---\n", .{round});
                 }
 
                 var work_done = false;
 
-                // Try to schedule on each processor.
+                // Iterate all processors.
                 for (self.processors) |*p| {
+                    // Truly sleeping Ps (already on pidle stack) do nothing this round.
+                    if (p.isOnIdleStack()) {
+                        if (self.debug_mode) {
+                            std.debug.print("[sleep] P{} on pidle\n", .{p.getID()});
+                        }
+                        continue;
+                    }
+
+                    // P reports idle (no local work + status Idle): try global once, then park.
+                    if (p.isIdle()) {
+                        if (self.tryGetFromGlobal(p)) {
+                            work_done = true;
+                            continue;
+                        }
+                        if (!p.isOnIdleStack()) {
+                            self.pidleput(p); // single entry to pidle.
+                        }
+                        continue;
+                    }
+
+                    // Active P: try local, then global (inside scheduleOnProcessor).
                     if (scheduleOnProcessor(self, p)) {
                         work_done = true;
+                    } else {
+                        // No work now → park once.
+                        if (!p.isOnIdleStack()) {
+                            self.pidleput(p);
+                        }
                     }
-                }
-
-                // If no work was done this round, break to avoid infinite loop.
-                if (!work_done) {
-                    if (self.debug_mode) {
-                        std.debug.print("No work found, scheduler stopping\n", .{});
-                    }
-                    break;
                 }
 
                 round += 1;
             }
 
             if (self.debug_mode) {
-                std.debug.print("\nScheduler: All processors idle, scheduling finished\n", .{});
-
-                // Display final status.
                 std.debug.print("\n=== Final Status ===\n", .{});
                 for (self.processors) |*p| {
                     std.debug.print("P{}: {} tasks remaining\n", .{ p.getID(), p.totalGoroutines() });
                 }
-            }
-
-            // Mark all processors without work as idle.
-            self.markIdleBatch(self.processors);
-
-            if (self.debug_mode) {
-                std.debug.print("\n=== Idle Processor Management ===\n", .{});
-                std.debug.print("Total idle processors: {}\n", .{self.getIdleCount()});
-                std.debug.print("Idle stack empty: {}\n", .{self.pidleEmpty()});
+                std.debug.print("Idle processors: [{}/{}]\n", .{ self.getIdleCount(), self.processorCount() });
+                self.displayPidle();
             }
         }
 
