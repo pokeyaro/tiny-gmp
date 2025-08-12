@@ -90,6 +90,10 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
             if (self.debug_mode) {
                 std.debug.print("Transferred {} goroutines from P{} to global queue\n", .{ actual_count, p.getID() });
             }
+
+            // Inform the scheduler that new work is available globally.
+            // This allows idle processors to be woken immediately instead of waiting for the next scheduling cycle.
+            self.wakeForNewWork(@as(u32, @intCast(actual_count)));
         }
 
         /// Get the next goroutine to execute from a specific processor.
