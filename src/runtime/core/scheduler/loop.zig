@@ -64,15 +64,16 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
             }
 
             // Mark all processors without work as idle.
-            for (self.processors) |*p| {
-                if (!p.hasWork()) {
-                    self.pidleput(p);
-                }
-            }
+            self.markIdleBatch(self.processors);
 
             if (self.debug_mode) {
                 std.debug.print("Total idle processors: {}\n", .{self.getIdleCount()});
                 std.debug.print("Idle stack empty: {}\n", .{self.pidleEmpty()});
+
+                // Test the tryWake functionality (for demonstration)
+                std.debug.print("\n=== Testing Wake Functionality ===\n", .{});
+                const woken = self.tryWake(2); // Try to wake 2 processors
+                std.debug.print("Wake test: requested=2, actual={}\n", .{woken});
             }
         }
 
