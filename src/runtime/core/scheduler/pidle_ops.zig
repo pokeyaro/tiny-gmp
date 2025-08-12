@@ -68,6 +68,9 @@ pub fn bind(comptime Self: type) type {
                 if (p.hasWork()) @panic("pidleput: P has non-empty run queue/runnext");
             }
 
+            // Set processor state to Idle.
+            p.setStatus(.Idle);
+
             // LIFO push.
             p.linkTo(self.getIdleHead());
             self.setIdleHead(p);
@@ -88,6 +91,9 @@ pub fn bind(comptime Self: type) type {
             self.setIdleHead(p.link);
             p.clearLink();
             self.decrementIdleCount();
+
+            // Set processor state to Running after wakeup.
+            p.setStatus(.Running);
 
             if (self.debug_mode) {
                 std.debug.print("[pidle] -P{} (idle={})\n", .{ p.getID(), self.getIdleCount() });
