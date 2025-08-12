@@ -62,7 +62,7 @@ pub const WorkItem = struct {
 pub const schedt = struct {
     const Self = @This();
 
-    // ==== Core Scheduling Fields ====
+    // === Core Scheduling Fields ===
 
     /// Global runnable queue (corresponds to Go's runq gQueue).
     runq: GlobalQueue,
@@ -76,7 +76,7 @@ pub const schedt = struct {
     /// Fixed at initialization, matching CPU core count.
     nproc: u32,
 
-    // ==== Statistics and State Fields ====
+    // === Statistics and State Fields ===
 
     /// Head of idle processor linked list (corresponds to Go's pidle).
     /// Uses intrusive linked list via P.link
@@ -90,21 +90,19 @@ pub const schedt = struct {
     /// Thread-safe atomic counter for unique goroutine IDs.
     goidgen: std.atomic.Value(u32),
 
-    // ==== Memory Management ====
+    // === Memory Management ===
 
     /// Allocator for managing dynamic memory.
     /// Used for processors array and other scheduler structures.
     allocator: std.mem.Allocator,
 
-    // ==== Debug Configuration ====
+    // === Debug Configuration ===
 
     /// Enable debug mode for scheduler operations.
     /// Controls debug output, state validation, and verbose logging.
     debug_mode: bool = false,
 
-    // =====================================================
-    // Mix in partials
-    // =====================================================
+    // === Mix in partials ===
 
     pub usingnamespace @import("ctor.zig").bind(@This());
     pub usingnamespace @import("basics.zig").bind(@This());

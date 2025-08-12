@@ -10,7 +10,7 @@ const P = tg.P;
 
 pub fn bind(comptime Self: type) type {
     return struct {
-        // ==== Public High-Level APIs ====
+        // === Public High-Level APIs ===
 
         /// Mark single processor as idle if it has no work.
         pub fn markIdle(self: *Self, p: *P) void {
@@ -57,7 +57,7 @@ pub fn bind(comptime Self: type) type {
             return woken;
         }
 
-        // ==== Core Idle Stack Operations ====
+        // === Core Idle Stack Operations ===
 
         /// Put P onto the idle stack (LIFO).
         ///
@@ -100,7 +100,7 @@ pub fn bind(comptime Self: type) type {
             return self.pidle == null;
         }
 
-        // ==== Private Helper Methods ====
+        // === Private Helper Methods ===
 
         /// Increment idle processor count.
         fn incrementIdleCount(self: *Self) void {

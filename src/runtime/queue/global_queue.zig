@@ -189,7 +189,7 @@ pub const GlobalQueue = struct {
         std.debug.print(" (count: {})\n", .{self.count});
     }
 
-    // ======== private helpers ========
+    // === Private Helper Methods ===
 
     /// Cut and return a prefix of exactly k nodes from the front of the queue.
     /// Cost: O(k). Requires 1 <= k <= self.count.

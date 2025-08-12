@@ -12,26 +12,23 @@ const P = tg.P;
 pub fn bind(comptime Self: type) type {
     return struct {
         /// Add a goroutine to the global run queue.
-        /// Matches Go's globrunqput() function.
-        /// Note: Adapted to use batch interface for performance consistency.
+        ///
+        /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func globrunqput").
         pub fn globrunqput(self: *Self, gp: *G) void {
-            // Clear goroutine scheduling link
+            // Clear goroutine scheduling link.
             gp.clearLink();
 
             // Put in global queue using batch interface (single element).
-            // This maintains consistency with global queue's batch-oriented design.
             var single_batch = [_]*G{gp};
             self.runq.enqueueBatch(&single_batch);
 
-            // TODO: Check if need to wake idle P.
-            if (self.hasIdleProcessors()) {
-                // Has idle P, might need to wake one to handle.
-                // self.wakep();  // Future implementation.
-            }
+            // Wake idle processors to handle new work.
+            self.wakeForNewWork(1);
         }
 
         /// Get a batch of goroutines from the global run queue.
-        /// Matches Go's globrunqget() function.
+        ///
+        /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func globrunqget").
         pub fn globrunqget(self: *Self, pp: *P, max: usize) ?*G {
             if (self.isEmpty()) return null;
 
@@ -77,6 +74,15 @@ pub fn bind(comptime Self: type) type {
             if (n > local_cap_half) n = local_cap_half; // Local half-capacity protection.
 
             return n;
+        }
+
+        /// Wake idle processors when new work is added to global queue.
+        /// This implements the scheduler's load balancing strategy by ensuring
+        /// idle processors can immediately pick up newly available work.
+        pub fn wakeForNewWork(self: *Self, work_count: u32) void {
+            if (self.hasIdleProcessors()) {
+                _ = self.tryWake(@min(work_count, self.getIdleCount()));
+            }
         }
     };
 }

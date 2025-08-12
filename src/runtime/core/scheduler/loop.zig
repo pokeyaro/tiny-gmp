@@ -59,21 +59,13 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
                 }
             }
 
-            if (self.debug_mode) {
-                std.debug.print("\n=== Idle Processor Management ===\n", .{});
-            }
-
             // Mark all processors without work as idle.
             self.markIdleBatch(self.processors);
 
             if (self.debug_mode) {
+                std.debug.print("\n=== Idle Processor Management ===\n", .{});
                 std.debug.print("Total idle processors: {}\n", .{self.getIdleCount()});
                 std.debug.print("Idle stack empty: {}\n", .{self.pidleEmpty()});
-
-                // Test the tryWake functionality (for demonstration)
-                std.debug.print("\n=== Testing Wake Functionality ===\n", .{});
-                const woken = self.tryWake(2); // Try to wake 2 processors
-                std.debug.print("Wake test: requested=2, actual={}\n", .{woken});
             }
         }
 
@@ -94,6 +86,9 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
 
         /// Try to schedule work on a specific processor.
         /// Returns true if work was done, false if no work available.
+        ///
+        /// Note: Similar to Go's findRunnable() but simplified for single processor.
+        /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func findRunnable").
         fn scheduleOnProcessor(self: *Self, p: *P) bool {
             // Try to get work from processor's local queue first.
             const work: WorkItem = self.runqget(p);
