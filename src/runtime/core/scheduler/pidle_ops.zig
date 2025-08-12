@@ -5,22 +5,24 @@ const tg = @import("../../tg.zig");
 const P = tg.P;
 
 // =====================================================
-// Idle-P Operations
+// Parking / Wakeup (pidle) Operations
 // =====================================================
 
 pub fn bind(comptime Self: type) type {
     return struct {
         // === Public High-Level APIs ===
 
-        /// Mark single processor as idle if it has no work.
-        pub fn markIdle(self: *Self, p: *P) void {
-            if (!p.hasWork() and !p.isParked()) self.pidleput(p);
+        /// Park this processor on the pidle stack if it has no runnable work.
+        pub fn parkIfNoWork(self: *Self, p: *P) void {
+            if (!p.hasWork() and !p.isParked()) {
+                self.pidleput(p);
+            }
         }
 
-        /// Mark all processors without work as idle (batch operation).
-        pub fn markIdleBatch(self: *Self, processors: []P) void {
+        /// Park all processors that currently have no runnable work.
+        pub fn parkAllIfNoWork(self: *Self, processors: []P) void {
             for (processors) |*p| {
-                self.markIdle(p);
+                self.parkIfNoWork(p);
             }
         }
 
