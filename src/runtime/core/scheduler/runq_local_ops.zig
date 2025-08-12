@@ -132,7 +132,7 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
                 return .{ .g = g, .src = .Runnext };
             }
 
-            // Slow path: get from main queue
+            // Slow path: get from main queue.
             const g = p.runq.dequeue();
             return .{ .g = g, .src = .Runq };
         }

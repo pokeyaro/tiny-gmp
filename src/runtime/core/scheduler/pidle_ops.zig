@@ -62,13 +62,7 @@ pub fn bind(comptime Self: type) type {
         ///
         /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func wakep").
         pub fn wakep(self: *Self) bool {
-            if (self.pidleget()) |_| { // pidleget() already sets status to .Running
-                if (self.debug_mode) {
-                    std.debug.print("[wake] woke one P (idle={})\n", .{self.getIdleCount()});
-                }
-                return true;
-            }
-            return false;
+            return self.tryWake(1) > 0;
         }
 
         // === Core Idle Stack Operations ===
