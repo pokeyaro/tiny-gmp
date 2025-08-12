@@ -17,33 +17,40 @@ cd tiny-gmp
 zig build run  # Debug demo: runs the stress test
 ```
 
-> **Note (Release mode)**
->
-> Release builds call the production API, but `main.zig` intentionally sets `task_functions = null` as a placeholder and will error.
->
+> **Note (Release mode)** \
+> Release builds call the production API, but `main.zig` intentionally sets `task_functions = null` as a placeholder and will error. \
 > To run a production build, pass your own tasks to `app.start(...)` or modify `main.zig`.
 
-## 🎉 What’s New in v0.4.0
+## 🎉 What’s New in v0.5.0
 
-### 🌍 Stable Global Runqueue & Batch Intake
+**Core theme:** make idle Ps _really_ sleep and be woken on demand.
 
-- Introduces a **global run queue** coordinating all Ps.
-- **Batch intake** from global → local to reduce contention.
-- Keeps local fast-path (`runnext` + `runq`); predictable, observable behavior.
-- _Goal:_ Demonstrate **global scheduling** layered on the local-only model.
+- **Pidle stack (LIFO)**: processors are explicitly parked on a stack.
+- **`PStatus.Parked`** replaces the old `on_idle_stack` flag.
+- **State-driven loop**: `switch (p.status)` → `.Parked` (skip), `.Idle` (try global once → park), `.Running` (local→global→park).
+- **Wakeups**:
+
+  - `globrunqput` and **`runqputslow`** now call `wakeForNewWork(k)` → `tryWake(min(k, npidle))`.
+  - `wakep()` is a thin wrapper of `tryWake(1)`.
+
+- **Safe park semantics**: never double-push the same P; `pidleput/pidleget` maintain `npidle` correctly.
+- **Clean exit**: loop stops when `runq.isEmpty()` **and** `npidle == nproc`.
 
 ## ✨ Features (current)
 
-> Single-threaded educational model; no wakeups, no work-stealing, no preemption (yet).
+> Single-threaded, educational build; **no work-stealing**, **no preemption** (yet). \
+> Now with **idle-aware wakeups**.
 
 - G (goroutine) with lifecycle: `Ready → Running → Done`
 - P (processor) with `runnext` fast path + local run queue
-- Global run queue with batch distribution into local queues
-- Deterministic demo output & debug prints for education
+- Global run queue with **batch intake** into local queues
+- **Local overflow → global** with **immediate wakeups**
+- **Pidle stack** with `PStatus.{Running, Idle, Parked}`
+- Deterministic demo output & rich debug prints
 
 ## 🧱 Architecture
 
-Current architecture for **v0.4.0** — designed for clarity and step-by-step learning (will evolve in future versions):
+Current architecture for **v0.5.0** — designed for clarity and step-by-step learning (will evolve in future versions):
 
 ```bash
 src/
@@ -56,68 +63,78 @@ src/
 │   │   └── shuffle.zig            # Fisher-Yates shuffling for debug randomization
 │   └── ds/
 │       ├── circular_queue.zig     # High-performance fixed-capacity queue
-│       └── linkedlist_deque.zig   # Doubly-linked deque (Historical, deprecated — file comments explain the original design rationale)
+│       └── linkedlist_deque.zig   # Doubly-linked deque
 │
 ├── runtime/                       # Core GMP scheduler implementation
 │   ├── app.zig                    # Application runtime orchestration
 │   ├── config/
 │   │   └── scheduler_config.zig   # Processor scaling strategies & configuration
-│   ├── core/
+│   ├── core
 │   │   ├── executor.zig           # Goroutine execution engine (minimal hooks)
 │   │   ├── lifecycle.zig          # Goroutine creation, scheduling, and cleanup
-│   │   └── scheduler.zig          # Main scheduling algorithms and work distribution
-│   ├── entity/
+│   │   └── scheduler              # Main scheduling algorithms and work distribution
+│   │       ├── basics.zig
+│   │       ├── ctor.zig
+│   │       ├── loop.zig
+│   │       ├── mod.zig
+│   │       ├── pidle_ops.zig
+│   │       ├── runq_global_ops.zig
+│   │       └── runq_local_ops.zig
+│   ├── gmp/
 │   │   ├── goroutine.zig          # Goroutine (G) state management
 │   │   └── processor.zig          # Processor (P) with local queue and runnext
-│   └── queue/
-│       ├── global_queue.zig       # Global scheduler queue with batch operations
-│       └── local_queue.zig        # Per-processor queue with overflow handling
+│   ├── queue/
+│   │   ├── global_queue.zig       # Global scheduler queue with batch operations
+│   │   └── local_queue.zig        # Per-processor queue with overflow handling
+│   └── tg.zig                     # Umbrella module for stable internal imports
 │
 └── main.zig                       # Entry point with debug/release mode selection
 ```
 
-## 📊 Scheduling Flow (v0.4.0)
+## 📊 Scheduling Flow (v0.5.0)
 
-Below is the end-to-end flow for **tiny-gmp v4**, covering both creation and execution phases:
+Below is the end-to-end flow for **tiny-gmp v5**, covering both creation and execution phases:
 
-![Tiny-GMP v4 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v4-scheduling-flow@2x.png)
+![Tiny-GMP v5 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v5-scheduling-flow@2x.png)
 
 ## 🖥️ Example Output
 
 ```text
-=== Tiny-GMP V4 - STRESS TEST ===
+=== Tiny-GMP V5 - STRESS TEST ===
+...
+--- Round 2001 ---
+[pidle] +P0 (idle=1)
+[pidle] +P1 (idle=2)
+[pidle] +P2 (idle=3)
+[pidle] +P3 (idle=4)
+[pidle] +P4 (idle=5)
+All processors idle and no work, scheduler stopping
 
-=== Creating 10000 Goroutines (Testing Overflow Logic) ===
+=== Final Status ===
+P0: 0 tasks remaining
+P1: 0 tasks remaining
+P2: 0 tasks remaining
+P3: 0 tasks remaining
+P4: 0 tasks remaining
+Idle processors: [5/5]
+Pidle stack: P4(head) -> P3 -> P2 -> P1 -> P0
 
-=== Scheduler Configuration ===
-Platform: Apple Silicon macOS
-CPU Cores: 10
-Strategy: 1:2 (P=CPU/2)
-Processors: 5 (1:2 scaling)
-===============================
-
-Scheduler initialized with 5 processors
-Created G1 with task1
-Created G2 with task2
-Created G3 with task3
-Created G4 with task4
-Created G5 with task5
-Created G6 with task6
-Created G7 with task7
-Created G8 with task8
-Created G9 with task9
-Created G10 with task10
-... creating goroutines G11 to G9990 ...
-Transferred 129 goroutines from P0 to global queue
-Transferred 129 goroutines from P1 to global queue
-Transferred 129 goroutines from P2 to global queue
-Transferred 129 goroutines from P3 to global queue
-Transferred 129 goroutines from P4 to global queue
+=== Stress Test Completed Successfully ===
 ```
 
-See full run in [docs/outputs/example-v0.4.0.txt](./docs/outputs/example-v0.4.0.txt)
+See full run in [docs/outputs/example-v0.5.0.txt](./docs/outputs/example-v0.5.0.txt)
 
 ## 📜 Version History
+
+### v0.5.0 — Idle-Aware Wakeups
+
+_“Make sleep/wake first-class.”_
+
+- **Features**: `PStatus {Running, Idle, Parked}`; strict **pidle** push/pop; unified **wakep/tryWake** + **wakeForNewWork** (global enqueue & local overflow); state-driven `schedule()` with early-exit; `displayPidle` debug.
+
+- **Design Boundaries**: single-threaded; no Ms/stealing/preemption; wake only on global work signals.
+
+- **Goal**: correct sleep/wake semantics, lay groundwork for multi-M and work-stealing.
 
 ### v0.4.0 — Global Runqueue Online
 
@@ -131,7 +148,7 @@ _“Stable runqueues & batch intake.“_
 
 _“Per-P scheduling with runnext fast path, no global handoff; refactored into modular files.”_
 
-- **Features**: modular layout (`core/`, `entity/`, `queue/`, `lib/ds/`); `LocalQueue` on `CircularQueue`; `WorkItem` origin tracing; `assignTasksCustom`; stepwise rounds.
+- **Features**: modular layout (`core/`, `gmp/`, `queue/`, `lib/ds/`); `LocalQueue` on `CircularQueue`; `WorkItem` origin tracing; `assignTasksCustom`; stepwise rounds.
 - **Design Boundaries**: no global runq; no work-stealing/wakeups; no preemption/time-slice.
 - **Goal**: solidify local-only model; prepare interfaces for global queue.
 
@@ -153,7 +170,6 @@ _“Single loop over a fixed G array; no P, no queues.“_
 
 ## 🛣️ Roadmap
 
-- **v0.5.0** — Idle-Aware Wakeups
 - **v0.6.0** — Work Stealing
 - **v0.7.0** — Time-slice / Yield
 

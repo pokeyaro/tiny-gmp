@@ -1,16 +1,15 @@
-//! Processor entity implementation (P in GMP model)
+//! Processor implementation (P in GMP model)
 //!
 //! Logical processor that manages local goroutine scheduling with fast-path optimization.
 //! Features runnext slot for newly created goroutines and local run queue for efficient
 //! work distribution. Provides comprehensive state management and debugging capabilities.
 
 const std = @import("std");
-const goroutine = @import("goroutine.zig");
-const local_queue = @import("../queue/local_queue.zig");
+const tg = @import("../tg.zig");
 
-// Import types
-const G = goroutine.G;
-const LocalQueue = local_queue.LocalQueue;
+// Types
+const G = tg.G;
+const LocalQueue = tg.queue.local_queue.LocalQueue;
 
 // =====================================================
 // P (Processor) Definitions
@@ -18,14 +17,16 @@ const LocalQueue = local_queue.LocalQueue;
 
 /// Status enum for Processor (P).
 pub const PStatus = enum {
-    Idle, // No work assigned
-    Running, // Actively executing Gs
+    Idle, // No local work; not yet on pidle.
+    Running, // Actively executing or ready to execute.
+    Parked, // Sleeping on pidle stack (must be woken).
 
     /// Convert a PStatus enum to a human-readable string.
     pub fn toString(self: PStatus) []const u8 {
         return switch (self) {
             .Idle => "Idle",
             .Running => "Running",
+            .Parked => "Parked",
         };
     }
 };
@@ -47,6 +48,11 @@ pub const P = struct {
     /// Fast-path slot for next G (corresponds to Go's runnext).
     runnext: ?*G = null,
 
+    /// Link to next processor in intrusive linked list.
+    /// Corresponds to Go's P.link field (used for pidle etc.).
+    /// null when P is not in any linked list.
+    link: ?*P = null,
+
     /// Create a new processor with an empty run queue and a unique ID.
     pub fn init(pid: u32) P {
         return P{
@@ -54,6 +60,7 @@ pub const P = struct {
             .status = .Idle,
             .runq = LocalQueue.init(),
             .runnext = null,
+            .link = null,
         };
     }
 
@@ -83,10 +90,14 @@ pub const P = struct {
         return self.status == .Running;
     }
 
-    /// Synchronize processor status with its actual work state.
-    /// Sets status to Idle if no work available, otherwise keeps current status.
+    /// Check if the processor is parked.
+    pub fn isParked(self: *const P) bool {
+        return self.status == .Parked;
+    }
+
+    /// Demote Running→Idle if no local work; don’t touch Parked or promote states.
     pub fn syncStatus(self: *P) void {
-        if (!self.hasWork()) self.setStatus(.Idle);
+        if (self.status == .Running and !self.hasWork()) self.status = .Idle;
     }
 
     /// Check if the runnext slot has a goroutine waiting.
@@ -125,6 +136,21 @@ pub const P = struct {
         const queue_size = self.runq.size();
         const runnext_size: usize = if (self.hasRunnext()) 1 else 0;
         return queue_size + runnext_size;
+    }
+
+    /// Link this processor to another processor (for idle stack).
+    pub fn linkTo(self: *P, next: ?*P) void {
+        self.link = next;
+    }
+
+    /// Clear the processor link.
+    pub fn clearLink(self: *P) void {
+        self.link = null;
+    }
+
+    /// Check if this processor is linked to another.
+    pub fn isLinked(self: *const P) bool {
+        return self.link != null;
     }
 
     /// Display processor state showing runnext and queue separately.

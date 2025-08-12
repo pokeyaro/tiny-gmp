@@ -5,9 +5,10 @@
 //! and context-aware execution with detailed logging and metrics collection.
 
 const std = @import("std");
-const goroutine = @import("../entity/goroutine.zig");
+const tg = @import("../tg.zig");
 
-const G = goroutine.G;
+// Types
+const G = tg.G;
 
 // =====================================================
 // Goroutine Execution Engine

@@ -4,13 +4,12 @@
 //! Provides both targeted and automatic processor selection for goroutine placement.
 
 const std = @import("std");
-const scheduler = @import("scheduler.zig");
-const goroutine = @import("../entity/goroutine.zig");
-const processor = @import("../entity/processor.zig");
+const tg = @import("../tg.zig");
 
-const schedt = scheduler.schedt;
-const G = goroutine.G;
-const P = processor.P;
+// Types
+const schedt = tg.scheduler.schedt;
+const G = tg.G;
+const P = tg.P;
 
 // Global round-robin cursor for selecting target P.
 // Single-threaded demo only; not safe for concurrent newproc calls.
@@ -18,6 +17,8 @@ var current_p_index: u32 = 0;
 
 /// Create a new goroutine and schedule it (equivalent to Go's newproc).
 /// Follows Go's scheduling strategy: put on current P's local queue.
+///
+/// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func newproc").
 pub fn newproc(sched: *schedt, p: *P, func: ?*const fn () void) !void {
     const gid = sched.nextGID();
 
@@ -28,7 +29,10 @@ pub fn newproc(sched: *schedt, p: *P, func: ?*const fn () void) !void {
     // Put on specified P's local queue (handles overflow internally).
     sched.runqput(p, g);
 
-    // TODO: wakep() - wake idle P if needed.
+    // Only after scheduler started, wake one idle P (if any).
+    if (sched.main_started) {
+        _ = sched.wakep();
+    }
 }
 
 /// Create a goroutine on an automatically chosen P (round-robin).

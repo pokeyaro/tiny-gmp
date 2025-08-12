@@ -64,3 +64,7 @@ This file remains as a **high-quality, generic deque** for educational purposes,
 but it is **deprecated** in the scheduler itself.
 
 See also: [`linkedlist_deque.zig`](../../src/lib/ds/linkedlist_deque.zig)
+
+---
+
+Author: Pokeya | Date: 2025-08-08

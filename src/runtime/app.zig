@@ -4,12 +4,14 @@
 //! including configuration validation and convenient wrapper functions.
 
 const std = @import("std");
-const scheduler_mod = @import("core/scheduler.zig");
-const lifecycle = @import("core/lifecycle.zig");
-const scheduler_config = @import("config/scheduler_config.zig");
+const tg = @import("tg.zig");
 
-// Import types
-const schedt = scheduler_mod.schedt;
+// Modules
+const lifecycle = tg.lifecycle;
+const scheduler_config = tg.config.scheduler;
+
+// Types
+const schedt = tg.scheduler.schedt;
 
 // =====================================================
 // Configuration Structures

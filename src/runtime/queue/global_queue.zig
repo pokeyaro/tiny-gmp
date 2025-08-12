@@ -5,10 +5,10 @@
 //! with overflow handling and load balancing capabilities.
 
 const std = @import("std");
-const goroutine = @import("../entity/goroutine.zig");
+const tg = @import("../tg.zig");
 
-// Import types
-const G = goroutine.G;
+// Types
+const G = tg.G;
 
 // =====================================================
 // Global Queue - Business Layer Queue for Goroutines
@@ -189,7 +189,7 @@ pub const GlobalQueue = struct {
         std.debug.print(" (count: {})\n", .{self.count});
     }
 
-    // ======== private helpers ========
+    // === Private Helper Methods ===
 
     /// Cut and return a prefix of exactly k nodes from the front of the queue.
     /// Cost: O(k). Requires 1 <= k <= self.count.

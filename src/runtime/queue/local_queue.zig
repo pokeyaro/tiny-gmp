@@ -5,14 +5,12 @@
 //! global queue and efficient goroutine storage with overflow management.
 
 const std = @import("std");
-const goroutine = @import("../entity/goroutine.zig");
-const circular_queue = @import("../../lib/ds/circular_queue.zig");
-const global_queue = @import("global_queue.zig");
+const tg = @import("../tg.zig");
 
-// Import types
-const G = goroutine.G;
-const CircularQueue = circular_queue.CircularQueue;
-const GlobalRunqBatch = global_queue.GlobalRunqBatch;
+// Types
+const G = tg.G;
+const CircularQueue = tg.lib.ds.circular_queue.CircularQueue;
+const GlobalRunqBatch = tg.queue.global_queue.GlobalRunqBatch;
 
 // =====================================================
 // Local Queue - Business Layer Queue for Goroutines
@@ -65,15 +63,12 @@ pub const LocalQueue = struct {
     /// Add a batch of goroutines from GlobalRunqBatch to the local queue.
     /// Used when processor receives goroutines from global queue.
     pub fn enqueueBatch(self: *LocalQueue, batch: GlobalRunqBatch) !void {
-        // Iterate through the G.schedlink chain
         var current = batch.batch_head;
         while (current) |g| {
-            const next = g.schedlink; // Save next goroutine.
-            g.clearLink(); // Clear link (entering array-based queue).
-
-            const success = self.enqueue(g);
-            if (!success) return error.LocalQueueFull;
-
+            const next = g.schedlink;
+            const ok = self.enqueue(g);
+            if (!ok) return error.LocalQueueFull;
+            g.clearLink();
             current = next;
         }
     }
