@@ -9,7 +9,7 @@ const scheduler_config = @import("../runtime/config/scheduler_config.zig");
 
 /// Run the complete scheduler stress test workflow.
 pub fn runStressTest(allocator: std.mem.Allocator) !void {
-    std.debug.print("=== Tiny-GMP V4 - STRESS TEST ===\n\n", .{});
+    std.debug.print("=== Tiny-GMP V5 - STRESS TEST ===\n\n", .{});
 
     const config = app.AppConfig{
         .total_goroutines = 10000,
