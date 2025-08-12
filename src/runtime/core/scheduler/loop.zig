@@ -69,6 +69,8 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
             }
         }
 
+        // === Private Helper Methods ===
+
         /// Check if there's any work to do across all processors and global queue.
         fn hasWork(self: *const Self) bool {
             // Check if global queue has work.
@@ -90,29 +92,22 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
         /// Note: Similar to Go's findRunnable() but simplified for single processor.
         /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func findRunnable").
         fn scheduleOnProcessor(self: *Self, p: *P) bool {
-            // Try to get work from processor's local queue first.
-            const work: WorkItem = self.runqget(p);
-
-            if (work.g) |g| {
-                logExecStart(self, p, g, work.src);
-
-                // Execute the goroutine.
-                executeGoroutine(self, p, g);
-
+            // Fast path: Try to get work from processor's local queue first.
+            if (self.tryGetFromLocal(p)) {
                 return true;
             }
 
-            // No local work, try to get from global queue.
-            if (!self.runq.isEmpty()) {
-                if (self.globrunqget(p, 0)) |g| { // 0 == no extra cap
-                    logExecStart(self, p, g, .Global);
+            // Slow path: Try global queue
+            if (self.tryGetFromGlobal(p)) {
+                return true;
+            }
 
-                    // Execute the goroutine.
-                    executeGoroutine(self, p, g);
-
+            // More aggressive work seeking before giving up.
+            // If there are still running processors, they might add work soon.
+            if (self.hasOtherProcessorsWorking(p)) {
+                // Give other processors a chance to add work to global queue.
+                if (self.tryGetFromGlobal(p)) {
                     return true;
-                } else if (self.debug_mode) {
-                    std.debug.print("[global] P{} <- batch empty\n", .{p.getID()});
                 }
             }
 
@@ -121,6 +116,46 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
                 std.debug.print("[idle]  P{} no work\n", .{p.getID()});
             }
 
+            return false;
+        }
+
+        /// Try to get work from local queue and execute if found.
+        fn tryGetFromLocal(self: *Self, p: *P) bool {
+            const work: WorkItem = self.runqget(p);
+
+            if (work.g) |g| {
+                logExecStart(self, p, g, work.src);
+                executeGoroutine(self, p, g);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// Try to get work from global queue and execute if found.
+        fn tryGetFromGlobal(self: *Self, p: *P) bool {
+            if (self.runq.isEmpty()) return false;
+
+            if (self.globrunqget(p, 0)) |g| {
+                logExecStart(self, p, g, .Global);
+                executeGoroutine(self, p, g);
+                return true;
+            }
+
+            if (self.debug_mode) {
+                std.debug.print("[global] P{} <- batch empty\n", .{p.getID()});
+            }
+            return false;
+        }
+
+        /// Check if any other processors are still working.
+        /// This indicates that new work might be added to global queue soon.
+        fn hasOtherProcessorsWorking(self: *const Self, current_p: *const P) bool {
+            for (self.processors) |*p| {
+                if (p.getID() != current_p.getID() and p.hasWork()) {
+                    return true;
+                }
+            }
             return false;
         }
 
