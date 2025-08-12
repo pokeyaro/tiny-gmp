@@ -22,14 +22,14 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
             defer self.main_started = false;
 
             if (self.debug_mode) {
-                std.debug.print("=== Scheduler starting with {} processors ===\n", .{self.nproc});
+                std.debug.print("=== Scheduler starting with {} processors ===\n", .{self.processorCount()});
             }
 
             var round: u32 = 1;
 
             while (true) {
                 // Early exit: no global work and all P are parked on pidle.
-                if (self.runq.isEmpty() and self.getIdleCount() >= self.nproc) {
+                if (self.runq.isEmpty() and self.getIdleCount() >= self.processorCount()) {
                     if (self.debug_mode) {
                         std.debug.print("All processors idle and no work, scheduler stopping\n", .{});
                     }
@@ -44,34 +44,34 @@ pub fn bind(comptime Self: type, comptime WorkItem: type, comptime GSrc: type) t
 
                 // Iterate all processors.
                 for (self.processors) |*p| {
-                    // Truly sleeping Ps (already on pidle stack) do nothing this round.
-                    if (p.isOnIdleStack()) {
-                        if (self.debug_mode) {
-                            std.debug.print("[sleep] P{} on pidle\n", .{p.getID()});
-                        }
-                        continue;
-                    }
-
-                    // P reports idle (no local work + status Idle): try global once, then park.
-                    if (p.isIdle()) {
-                        if (self.tryGetFromGlobal(p)) {
-                            work_done = true;
+                    switch (p.status) {
+                        // PARKED: already on pidle stack — nothing to do this round.
+                        .Parked => {
+                            if (self.debug_mode) {
+                                std.debug.print("[sleep] P{} on pidle\n", .{p.getID()});
+                            }
                             continue;
-                        }
-                        if (!p.isOnIdleStack()) {
-                            self.pidleput(p); // single entry to pidle.
-                        }
-                        continue;
-                    }
+                        },
 
-                    // Active P: try local, then global (inside scheduleOnProcessor).
-                    if (scheduleOnProcessor(self, p)) {
-                        work_done = true;
-                    } else {
-                        // No work now → park once.
-                        if (!p.isOnIdleStack()) {
-                            self.pidleput(p);
-                        }
+                        // IDLE: no local work (by invariant from syncStatus).
+                        // Try to pull once from global; if none, park this P.
+                        .Idle => {
+                            if (self.tryGetFromGlobal(p)) {
+                                work_done = true;
+                            } else {
+                                self.pidleput(p); // park once
+                            }
+                        },
+
+                        // RUNNING: actively seek work (local first, then global inside helper).
+                        // If none found this round, park it.
+                        .Running => {
+                            if (scheduleOnProcessor(self, p)) {
+                                work_done = true;
+                            } else {
+                                self.pidleput(p); // no work -> park
+                            }
+                        },
                     }
                 }
 

@@ -14,9 +14,7 @@ pub fn bind(comptime Self: type) type {
 
         /// Mark single processor as idle if it has no work.
         pub fn markIdle(self: *Self, p: *P) void {
-            if (!p.hasWork()) {
-                self.pidleput(p);
-            }
+            if (!p.hasWork() and !p.isParked()) self.pidleput(p);
         }
 
         /// Mark all processors without work as idle (batch operation).
@@ -76,13 +74,12 @@ pub fn bind(comptime Self: type) type {
                 if (p.hasWork()) @panic("pidleput: P has non-empty run queue/runnext");
             }
 
-            // Set processor state to Idle.
-            p.setStatus(.Idle);
+            // Mark P as Parked before pushing onto pidle (about to sleep).
+            p.setStatus(.Parked);
 
             // LIFO push.
             p.linkTo(self.getIdleHead());
             self.setIdleHead(p);
-            p.setOnIdleStack(true);
             self.incrementIdleCount();
 
             if (self.debug_mode) {
@@ -99,10 +96,9 @@ pub fn bind(comptime Self: type) type {
             // LIFO pop.
             self.setIdleHead(p.link);
             p.clearLink();
-            p.setOnIdleStack(false);
             self.decrementIdleCount();
 
-            // Set processor state to Running after wakeup.
+            // Mark P as Running after popping from pidle (wake up).
             p.setStatus(.Running);
 
             if (self.debug_mode) {

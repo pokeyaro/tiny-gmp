@@ -17,14 +17,16 @@ const LocalQueue = tg.queue.local_queue.LocalQueue;
 
 /// Status enum for Processor (P).
 pub const PStatus = enum {
-    Idle, // No work assigned
-    Running, // Actively executing Gs
+    Idle, // No local work; not yet on pidle.
+    Running, // Actively executing or ready to execute.
+    Parked, // Sleeping on pidle stack (must be woken).
 
     /// Convert a PStatus enum to a human-readable string.
     pub fn toString(self: PStatus) []const u8 {
         return switch (self) {
             .Idle => "Idle",
             .Running => "Running",
+            .Parked => "Parked",
         };
     }
 };
@@ -50,10 +52,6 @@ pub const P = struct {
     /// Corresponds to Go's P.link field (used for pidle etc.).
     /// null when P is not in any linked list.
     link: ?*P = null,
-
-    /// Track whether this processor is currently in the idle stack.
-    /// Used to synchronize processor state with scheduler's pidle management.
-    on_idle_stack: bool = false,
 
     /// Create a new processor with an empty run queue and a unique ID.
     pub fn init(pid: u32) P {
@@ -92,10 +90,14 @@ pub const P = struct {
         return self.status == .Running;
     }
 
-    /// Synchronize processor status with its actual work state.
-    /// Sets status to Idle if no work available, otherwise keeps current status.
+    /// Check if the processor is parked.
+    pub fn isParked(self: *const P) bool {
+        return self.status == .Parked;
+    }
+
+    /// Demote Running→Idle if no local work; don’t touch Parked or promote states.
     pub fn syncStatus(self: *P) void {
-        if (!self.hasWork()) self.setStatus(.Idle);
+        if (self.status == .Running and !self.hasWork()) self.status = .Idle;
     }
 
     /// Check if the runnext slot has a goroutine waiting.
@@ -149,18 +151,6 @@ pub const P = struct {
     /// Check if this processor is linked to another.
     pub fn isLinked(self: *const P) bool {
         return self.link != null;
-    }
-
-    /// Check if this processor is currently in the idle stack.
-    /// Returns true if the processor has been marked idle and placed in pidle.
-    pub fn isOnIdleStack(self: *const P) bool {
-        return self.on_idle_stack;
-    }
-
-    /// Set the idle stack status for this processor.
-    /// Should be called when processor enters/exits the idle stack.
-    pub fn setOnIdleStack(self: *P, v: bool) void {
-        self.on_idle_stack = v;
     }
 
     /// Display processor state showing runnext and queue separately.

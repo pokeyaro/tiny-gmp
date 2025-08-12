@@ -71,7 +71,7 @@ pub fn bind(comptime Self: type) type {
             const qs = self.runqsize();
             if (qs == 0) return 0;
 
-            var n = qs / self.nproc + 1; // Based on even distribution + 1.
+            var n = qs / self.processorCount() + 1; // Based on even distribution + 1.
             if (n > qs / 2) n = qs / 2; // Take at most half of the global queue.
             if (max > 0 and n > max) n = max; // Obey caller’s limit.
             if (n > local_cap_half) n = local_cap_half; // Guard: don’t overfill local runq.
