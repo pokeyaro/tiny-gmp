@@ -102,27 +102,9 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
         ///
         /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func runqget").
         ///
-        /// Implementation Strategy: "Passive Replenishment"
-        /// This implementation follows Go's actual strategy of passive runnext replenishment.
-        /// When runnext is consumed, it remains empty until a new goroutine is scheduled.
-        ///
-        /// Alternative Strategy (NOT used): "Active Promotion"
-        /// An alternative would be to actively promote a goroutine from runq to runnext
-        /// when runnext is consumed, but this approach has drawbacks:
-        /// - Increased complexity and potential for bugs
-        /// - Additional overhead on every dequeue operation
-        /// - May reduce fairness by keeping some goroutines at the back of runq
-        /// - Not how Go actually implements it
-        ///
-        /// Why Passive Replenishment is Better:
-        /// - Simpler and more reliable implementation
-        /// - runnext serves its intended purpose: fast path for newly created goroutines
-        /// - Maintains fairness in goroutine scheduling
-        /// - Consistent with Go's design philosophy of simplicity
-        /// - New goroutines are created frequently enough that runnext won't stay empty long
-        ///
-        /// This design choice aligns with Go's runtime implementation and ensures our
-        /// educational GMP model accurately reflects the real scheduler behavior.
+        /// Uses Go’s “Passive Replenishment” — once `runnext` is consumed,
+        /// it stays empty until a new goroutine is scheduled there.
+        /// See docs/design/en/runnext-passive-replenishment.md for details.
         pub fn runqget(self: *Self, p: *P) WorkItem {
             _ = self;
 
