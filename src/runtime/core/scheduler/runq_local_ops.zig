@@ -1,3 +1,7 @@
+// =====================================================
+// Local Queue Operations
+// =====================================================
+
 const std = @import("std");
 const tg = @import("../../tg.zig");
 
@@ -8,10 +12,6 @@ const shuffle = tg.lib.algo.shuffle;
 // Types
 const G = tg.G;
 const P = tg.P;
-
-// =====================================================
-// Local Queue Operations
-// =====================================================
 
 pub fn bind(comptime Self: type, comptime WorkItem: type) type {
     return struct {

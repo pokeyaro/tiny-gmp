@@ -75,9 +75,12 @@ src/
 │   │   └── scheduler              # Main scheduling algorithms and work distribution
 │   │       ├── basics.zig
 │   │       ├── ctor.zig
+│   │       ├── display.zig
+│   │       ├── find_work.zig
 │   │       ├── loop.zig
 │   │       ├── mod.zig
 │   │       ├── pidle_ops.zig
+│   │       ├── runner.zig
 │   │       ├── runq_global_ops.zig
 │   │       └── runq_local_ops.zig
 │   ├── gmp/

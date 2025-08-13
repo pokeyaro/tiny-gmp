@@ -24,6 +24,7 @@ pub const GSrc = enum {
     Runnext,
     Runq,
     Global,
+    None,
 
     /// Convert a GSrc enum to a human-readable string.
     pub fn toString(self: GSrc) []const u8 {
@@ -31,6 +32,7 @@ pub const GSrc = enum {
             .Runnext => "runnext",
             .Runq => "runq",
             .Global => "global",
+            .None => "null",
         };
     }
 };
@@ -108,10 +110,13 @@ pub const schedt = struct {
 
     // === Mix in partials ===
 
-    pub usingnamespace @import("ctor.zig").bind(@This());
-    pub usingnamespace @import("basics.zig").bind(@This());
-    pub usingnamespace @import("runq_global_ops.zig").bind(@This());
-    pub usingnamespace @import("runq_local_ops.zig").bind(@This(), WorkItem);
-    pub usingnamespace @import("loop.zig").bind(@This(), WorkItem, GSrc);
-    pub usingnamespace @import("pidle_ops.zig").bind(@This());
+    pub usingnamespace @import("ctor.zig").bind(@This()); // initialization & destruction
+    pub usingnamespace @import("basics.zig").bind(@This()); // basic utilities for scheduler
+    pub usingnamespace @import("pidle_ops.zig").bind(@This()); // idle processor stack operations
+    pub usingnamespace @import("runq_local_ops.zig").bind(@This(), WorkItem); // local run queue operations
+    pub usingnamespace @import("runq_global_ops.zig").bind(@This()); // global run queue operations
+    pub usingnamespace @import("runner.zig").bind(@This()); // run & finalize goroutine execution
+    pub usingnamespace @import("find_work.zig").bind(@This(), WorkItem); // locate runnable work items
+    pub usingnamespace @import("loop.zig").bind(@This()); // main scheduling loop
+    pub usingnamespace @import("display.zig").bind(@This()); // display & debug utilities
 };

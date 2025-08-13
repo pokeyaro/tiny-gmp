@@ -1,13 +1,13 @@
+// =====================================================
+// Global Queue Operations
+// =====================================================
+
 const std = @import("std");
 const tg = @import("../../tg.zig");
 
 // Types
 const G = tg.G;
 const P = tg.P;
-
-// =====================================================
-// Global Queue Operations
-// =====================================================
 
 pub fn bind(comptime Self: type) type {
     return struct {

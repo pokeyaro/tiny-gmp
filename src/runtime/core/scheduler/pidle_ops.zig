@@ -1,12 +1,12 @@
+// =====================================================
+// Parking / Wakeup (pidle) Operations
+// =====================================================
+
 const std = @import("std");
 const tg = @import("../../tg.zig");
 
 // Types
 const P = tg.P;
-
-// =====================================================
-// Parking / Wakeup (pidle) Operations
-// =====================================================
 
 pub fn bind(comptime Self: type) type {
     return struct {
@@ -112,32 +112,6 @@ pub fn bind(comptime Self: type) type {
         /// Check if idle stack is empty.
         pub fn pidleEmpty(self: *const Self) bool {
             return self.pidle == null;
-        }
-
-        /// Display the idle processor stack for debugging.
-        /// Shows the linked list structure with head indication.
-        /// Output format: "Pidle stack: P2(head) -> P1 -> P0" or "Pidle stack: (empty)".
-        pub fn displayPidle(self: *const Self) void {
-            std.debug.print("Pidle stack: ", .{});
-
-            var node = self.pidle;
-            if (node == null) {
-                std.debug.print("(empty)\n", .{});
-                return;
-            }
-
-            var first = true;
-            while (node) |p| {
-                if (!first) std.debug.print(" -> ", .{});
-                if (first) {
-                    std.debug.print("P{}(head)", .{p.getID()});
-                    first = false;
-                } else {
-                    std.debug.print("P{}", .{p.getID()});
-                }
-                node = p.link;
-            }
-            std.debug.print("\n", .{});
         }
 
         // === Private Helper Methods ===
