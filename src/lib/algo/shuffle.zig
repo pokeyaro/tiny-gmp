@@ -19,7 +19,7 @@ fn shuffleForward(comptime T: type, slice: []T) void {
     if (slice.len <= 1) return;
     var i: usize = 1;
     while (i < slice.len) : (i += 1) {
-        const j = random.cheaprandIndex(i + 1);
+        const j = random.cheapRandIndex(i + 1);
         std.mem.swap(T, &slice[i], &slice[j]);
     }
 }
@@ -30,7 +30,7 @@ fn shuffleReverse(comptime T: type, slice: []T) void {
     if (slice.len <= 1) return;
     var i: usize = slice.len - 1;
     while (i > 0) : (i -= 1) {
-        const j = random.cheaprandIndex(i + 1);
+        const j = random.cheapRandIndex(i + 1);
         std.mem.swap(T, &slice[i], &slice[j]);
     }
 }
