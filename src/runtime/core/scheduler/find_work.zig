@@ -11,7 +11,7 @@ const P = tg.P;
 pub fn bind(comptime Self: type, comptime WorkItem: type) type {
     return struct {
         /// Provides a method to locate the next runnable goroutine for a given processor.
-        /// Search order: runnext (local) → runq (local) → global queue.
+        /// Search order: runnext (local) → runq (local) → global queue → stealing.
         /// Returns a WorkItem describing the goroutine and its source.
         ///
         /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func findRunnable").
@@ -27,6 +27,11 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
                 return .{ .g = g, .src = .Global };
             }
             self.debugGlobalMiss(p, qs_before);
+
+            // Steal path: try stealing a half-batch from another P into the local run queue, then dequeue one from local to run.
+            if (self.stealWork(p)) |wi| {
+                return wi;
+            }
 
             // No work anywhere.
             return null;

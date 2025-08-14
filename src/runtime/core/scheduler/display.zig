@@ -3,6 +3,10 @@
 // =====================================================
 
 const std = @import("std");
+const tg = @import("../../tg.zig");
+
+// Types
+const P = tg.P;
 
 pub fn bind(comptime Self: type) type {
     return struct {
@@ -42,7 +46,7 @@ pub fn bind(comptime Self: type) type {
         }
 
         /// Show the pidle stack (debug only), e.g.:
-        /// "Pidle stack: P4(head) -> P3 -> P2" or "(empty)".
+        /// Example: "Pidle stack: P4(head) -> P3 -> P2" or "(empty)".
         pub fn displayPidle(self: *const Self) void {
             if (!self.debug_mode) return;
 
@@ -66,6 +70,32 @@ pub fn bind(comptime Self: type) type {
                 node = p.link;
             }
             std.debug.print("\n", .{});
+        }
+
+        /// Print the victim scan order for a steal attempt.
+        /// Example: "[steal] P0 scan(start=3): P3 -> P4 -> P0(skip) -> P1 -> P2 (all empty)".
+        pub fn displayVictimScan(self: *const Self, thief: *const P, start: usize, n: usize) void {
+            if (!self.debug_mode or n == 0) return;
+
+            std.debug.print("[steal] P{} scan(start={}): ", .{ thief.getID(), start });
+
+            var i: usize = 0;
+            var first = true;
+            while (i < n) : (i += 1) {
+                const pos = (start + i) % n;
+                const p = &self.processors[pos];
+
+                if (!first) std.debug.print(" -> ", .{});
+                first = false;
+
+                if (p.getID() == thief.getID()) {
+                    std.debug.print("P{}(skip)", .{p.getID()});
+                } else {
+                    std.debug.print("P{}", .{p.getID()});
+                }
+            }
+
+            std.debug.print(" (all empty)\n", .{});
         }
     };
 }
