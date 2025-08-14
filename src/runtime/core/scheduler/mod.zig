@@ -24,7 +24,6 @@ pub const GSrc = enum {
     Runnext,
     Runq,
     Global,
-    None,
 
     /// Convert a GSrc enum to a human-readable string.
     pub fn toString(self: GSrc) []const u8 {
@@ -32,7 +31,6 @@ pub const GSrc = enum {
             .Runnext => "runnext",
             .Runq => "runq",
             .Global => "global",
-            .None => "null",
         };
     }
 };
@@ -40,7 +38,7 @@ pub const GSrc = enum {
 /// Result type returned by runqget function.
 /// Contains the goroutine and information about its source.
 pub const WorkItem = struct {
-    g: ?*G,
+    g: *G,
     src: GSrc,
 
     /// Typed source accessor.
