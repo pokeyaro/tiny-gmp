@@ -112,7 +112,7 @@ pub const schedt = struct {
     pub usingnamespace @import("basics.zig").bind(@This()); // basic utilities for scheduler
     pub usingnamespace @import("pidle_ops.zig").bind(@This()); // idle processor stack operations
     pub usingnamespace @import("runq_local_ops.zig").bind(@This(), WorkItem); // local run queue operations
-    pub usingnamespace @import("runq_global_ops.zig").bind(@This()); // global run queue operations
+    pub usingnamespace @import("runq_global_ops.zig").bind(@This(), WorkItem); // global run queue operations
     pub usingnamespace @import("runner.zig").bind(@This()); // run & finalize goroutine execution
     pub usingnamespace @import("steal_work.zig").bind(@This(), WorkItem); // work stealing logic (steal tasks from other Ps)
     pub usingnamespace @import("find_work.zig").bind(@This(), WorkItem); // locate runnable work items

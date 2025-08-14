@@ -17,21 +17,15 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
         /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func findRunnable").
         pub fn findRunnable(self: *Self, p: *P) ?WorkItem {
             // Fast path: local runnext → local runq.
-            if (self.runqget(p)) |wi| {
-                return wi;
-            }
+            if (self.runqget(p)) |wi| return wi;
 
             // Slow path: try global queue (batch intake into local; return immediate one).
             const qs_before: usize = if (self.debug_mode) self.runqsize() else 0;
-            if (self.globrunqget(p, 0)) |g| {
-                return .{ .g = g, .src = .Global };
-            }
+            if (self.globrunqgetWorkItem(p)) |wi| return wi;
             self.debugGlobalMiss(p, qs_before);
 
             // Steal path: try stealing a half-batch from another P into the local run queue, then dequeue one from local to run.
-            if (self.stealWork(p)) |wi| {
-                return wi;
-            }
+            if (self.stealWork(p)) |wi| return wi;
 
             // No work anywhere.
             return null;
