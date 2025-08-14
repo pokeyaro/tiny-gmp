@@ -60,6 +60,7 @@ src/
 │
 ├── lib/
 │   ├── algo/
+│   │   ├── random.zig             # Lightweight random helpers
 │   │   └── shuffle.zig            # Fisher-Yates shuffling for debug randomization
 │   └── ds/
 │       ├── circular_queue.zig     # High-performance fixed-capacity queue
