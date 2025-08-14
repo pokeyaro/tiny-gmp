@@ -53,11 +53,10 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
         fn debugGlobalMiss(self: *const Self, p: *const P, qs_before: usize) void {
             if (!self.debug_mode or qs_before == 0) return;
 
-            const available = p.runq.capacity() - p.runq.size();
-            if (available == 0) {
-                std.debug.print("[global] P{} skipped: local queue full\n", .{p.getID()});
-            } else {
+            if (p.runq.hasCapacity()) {
                 std.debug.print("[global] P{} <- batch empty\n", .{p.getID()});
+            } else {
+                std.debug.print("[global] P{} skipped: local queue full\n", .{p.getID()});
             }
         }
     };

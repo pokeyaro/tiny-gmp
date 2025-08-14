@@ -39,7 +39,7 @@ pub fn bind(comptime Self: type) type {
             var n = self.calculateBatchSize(max, local_cap_half);
 
             // Check actual available space in target processor's local queue.
-            const available = pp.runq.capacity() - pp.runq.size();
+            const available = pp.runq.available();
             if (available == 0) return null; // Local queue is full.
 
             // Ensure we have at least 1 goroutine and don't exceed available space.
