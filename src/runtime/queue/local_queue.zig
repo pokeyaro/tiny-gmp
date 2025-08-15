@@ -51,6 +51,17 @@ pub const LocalQueue = struct {
         return self.queue.isFull();
     }
 
+    /// Get remaining capacity of the local run queue.
+    /// Equivalent to `capacity() - size()`.
+    pub fn available(self: *const LocalQueue) usize {
+        return self.capacity() - self.size();
+    }
+
+    /// True if the queue still has at least one free slot.
+    pub fn hasCapacity(self: *const LocalQueue) bool {
+        return self.available() > 0;
+    }
+
     /// Add a goroutine to the queue.
     /// Returns true if successful, false if queue is full.
     pub fn enqueue(self: *LocalQueue, g: *G) bool {

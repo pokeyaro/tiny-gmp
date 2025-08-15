@@ -25,6 +25,7 @@ pub const queue = struct {
 // === libs ===
 pub const lib = struct {
     pub const algo = struct {
+        pub const random = @import("../lib/algo/random.zig");
         pub const shuffle = @import("../lib/algo/shuffle.zig");
     };
     pub const ds = struct {

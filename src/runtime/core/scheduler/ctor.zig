@@ -1,3 +1,7 @@
+// =====================================================
+// Scheduler Construction / Destruction
+// =====================================================
+
 const std = @import("std");
 const tg = @import("../../tg.zig");
 
@@ -7,10 +11,6 @@ const scheduler_config = tg.config.scheduler;
 // Types
 const P = tg.P;
 const GlobalQueue = tg.queue.global_queue.GlobalQueue;
-
-// =====================================================
-// Scheduler Construction / Destruction
-// =====================================================
 
 pub fn bind(comptime Self: type) type {
     return struct {

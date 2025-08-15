@@ -21,36 +21,54 @@ zig build run  # Debug demo: runs the stress test
 > Release builds call the production API, but `main.zig` intentionally sets `task_functions = null` as a placeholder and will error. \
 > To run a production build, pass your own tasks to `app.start(...)` or modify `main.zig`.
 
-## 🎉 What’s New in v0.5.0
+## 🎉 What’s New in v0.6.0
 
-**Core theme:** make idle Ps _really_ sleep and be woken on demand.
+**Core theme:** introduce **work-stealing** with clear victim scanning and capacity checks.
 
-- **Pidle stack (LIFO)**: processors are explicitly parked on a stack.
-- **`PStatus.Parked`** replaces the old `on_idle_stack` flag.
-- **State-driven loop**: `switch (p.status)` → `.Parked` (skip), `.Idle` (try global once → park), `.Running` (local→global→park).
-- **Wakeups**:
+- **Work-stealing loop**: each idle P attempts up to `stealTries × nproc` victim scans per steal attempt.
 
-  - `globrunqput` and **`runqputslow`** now call `wakeForNewWork(k)` → `tryWake(min(k, npidle))`.
-  - `wakep()` is a thin wrapper of `tryWake(1)`.
+- **Victim selection**:
 
-- **Safe park semantics**: never double-push the same P; `pidleput/pidleget` maintain `npidle` correctly.
-- **Clean exit**: loop stops when `runq.isEmpty()` **and** `npidle == nproc`.
+  - Randomized starting index (`cheapRandIndex`).
+
+  - Ring scan order, skipping `thief` itself.
+
+  - Iteration stops after one full round.
+
+- **Capacity-aware stealing**:
+
+  - Skip victim if thief’s local run queue is full.
+
+  - Skip victim if it has no runnable work.
+
+- **Steal operation**:
+
+  - Steal **half** of victim’s run queue (capped by thief’s available capacity).
+
+  - **No** `runnext` **stealing** — intentionally simpler than Go’s runtime.
+
+  - Batch-move with defensive capacity checks.
+
+- **Refactor**:
+
+  - `refactor(scheduler)`: **unify work finding into** `findRunnable` — integrates global queue intake and stealing into a single, consistent path.
 
 ## ✨ Features (current)
 
 > Single-threaded, educational build; **no work-stealing**, **no preemption** (yet). \
-> Now with **idle-aware wakeups**.
+> Now with **deterministic work-stealing** and integrated work-finding logic.
 
 - G (goroutine) with lifecycle: `Ready → Running → Done`
 - P (processor) with `runnext` fast path + local run queue
 - Global run queue with **batch intake** into local queues
 - **Local overflow → global** with **immediate wakeups**
 - **Pidle stack** with `PStatus.{Running, Idle, Parked}`
+- **Work-stealing** with random start & capacity-based victim selection
 - Deterministic demo output & rich debug prints
 
 ## 🧱 Architecture
 
-Current architecture for **v0.5.0** — designed for clarity and step-by-step learning (will evolve in future versions):
+Current architecture for **v0.6.0** — designed for clarity and step-by-step learning (will evolve in future versions):
 
 ```bash
 src/
@@ -60,6 +78,7 @@ src/
 │
 ├── lib/
 │   ├── algo/
+│   │   ├── random.zig             # Lightweight random helpers
 │   │   └── shuffle.zig            # Fisher-Yates shuffling for debug randomization
 │   └── ds/
 │       ├── circular_queue.zig     # High-performance fixed-capacity queue
@@ -72,14 +91,18 @@ src/
 │   ├── core
 │   │   ├── executor.zig           # Goroutine execution engine (minimal hooks)
 │   │   ├── lifecycle.zig          # Goroutine creation, scheduling, and cleanup
-│   │   └── scheduler              # Main scheduling algorithms and work distribution
+│   │   └── scheduler/             # Main scheduling algorithms and work distribution
 │   │       ├── basics.zig
 │   │       ├── ctor.zig
+│   │       ├── display.zig
+│   │       ├── find_work.zig
 │   │       ├── loop.zig
 │   │       ├── mod.zig
 │   │       ├── pidle_ops.zig
+│   │       ├── runner.zig
 │   │       ├── runq_global_ops.zig
-│   │       └── runq_local_ops.zig
+│   │       ├── runq_local_ops.zig
+│   │       └── steal_work.zig
 │   ├── gmp/
 │   │   ├── goroutine.zig          # Goroutine (G) state management
 │   │   └── processor.zig          # Processor (P) with local queue and runnext
@@ -91,86 +114,58 @@ src/
 └── main.zig                       # Entry point with debug/release mode selection
 ```
 
-## 📊 Scheduling Flow (v0.5.0)
+## 🏗 Design Philosophy
 
-Below is the end-to-end flow for **tiny-gmp v5**, covering both creation and execution phases:
+Tiny-GMP is not just an implementation — it's a step-by-step exploration of Go’s GMP scheduler model. Each feature is designed with clarity, traceability, and educational value in mind.
 
-![Tiny-GMP v5 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v5-scheduling-flow@2x.png)
+See [docs/design](./docs/design/en/) for detailed design notes, including:
+
+```bash
+docs/design/
+├── go-idle-p-lifo.md
+├── linkedlist-deque-history.md
+├── runnext-passive-replenishment.md
+└── work-stealing-strategy.md
+```
+
+## 📊 Scheduling Flow (v0.6.0)
+
+Below is the end-to-end flow for **tiny-gmp v6**, covering both creation and execution phases:
+
+![Tiny-GMP v6 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v6-scheduling-flow@2x.png)
 
 ## 🖥️ Example Output
 
 ```text
-=== Tiny-GMP V5 - STRESS TEST ===
+=== Tiny-GMP V6 - STRESS TEST ===
 ...
 --- Round 2001 ---
+[steal] P0 scan(start=1): P1 -> P2 -> P3 -> P4 -> P0(skip) (all empty)
 [pidle] +P0 (idle=1)
+[steal] P1 scan(start=4): P4 -> P0 -> P1(skip) -> P2 -> P3 (all empty)
 [pidle] +P1 (idle=2)
+[steal] P2 scan(start=4): P4 -> P0 -> P1 -> P2(skip) -> P3 (all empty)
 [pidle] +P2 (idle=3)
+[steal] P3 scan(start=3): P3(skip) -> P4 -> P0 -> P1 -> P2 (all empty)
 [pidle] +P3 (idle=4)
+[steal] P4 scan(start=2): P2 -> P3 -> P4(skip) -> P0 -> P1 (all empty)
 [pidle] +P4 (idle=5)
 All processors idle and no work, scheduler stopping
 
 === Final Status ===
-P0: 0 tasks remaining
-P1: 0 tasks remaining
-P2: 0 tasks remaining
-P3: 0 tasks remaining
-P4: 0 tasks remaining
-Idle processors: [5/5]
-Pidle stack: P4(head) -> P3 -> P2 -> P1 -> P0
+...
 
 === Stress Test Completed Successfully ===
 ```
 
-See full run in [docs/outputs/example-v0.5.0.txt](./docs/outputs/example-v0.5.0.txt)
+See full run in [docs/outputs/example-v0.6.0.txt](./docs/outputs/example-v0.6.0.txt).
 
 ## 📜 Version History
 
-### v0.5.0 — Idle-Aware Wakeups
-
-_“Make sleep/wake first-class.”_
-
-- **Features**: `PStatus {Running, Idle, Parked}`; strict **pidle** push/pop; unified **wakep/tryWake** + **wakeForNewWork** (global enqueue & local overflow); state-driven `schedule()` with early-exit; `displayPidle` debug.
-
-- **Design Boundaries**: single-threaded; no Ms/stealing/preemption; wake only on global work signals.
-
-- **Goal**: correct sleep/wake semantics, lay groundwork for multi-M and work-stealing.
-
-### v0.4.0 — Global Runqueue Online
-
-_“Stable runqueues & batch intake.“_
-
-- **Features**: global runq; batch intake; local overflow to global; debug-first behavior.
-- **Design Boundaries**: no work-stealing; no idle-aware wakeups; cooperative (non-preemptive).
-- **Goal**: bridge per-P scheduling with system-wide coordination.
-
-### v0.3.0 — Local Runqueues Only + Modular Architecture
-
-_“Per-P scheduling with runnext fast path, no global handoff; refactored into modular files.”_
-
-- **Features**: modular layout (`core/`, `gmp/`, `queue/`, `lib/ds/`); `LocalQueue` on `CircularQueue`; `WorkItem` origin tracing; `assignTasksCustom`; stepwise rounds.
-- **Design Boundaries**: no global runq; no work-stealing/wakeups; no preemption/time-slice.
-- **Goal**: solidify local-only model; prepare interfaces for global queue.
-
-### v0.2.0 — Per-P Local Runqueues (runnext + circular runq)
-
-_“Multiple Ps with per-P circular queues and a runnext fast path; round-robin assignment; no global queue.”_
-
-- **Features**: P with `runnext` + circular `runq`; round-robin assign; dequeue prioritizes `runnext`; one G per round for traceability.
-- **Design Boundaries**: no global runq / batch intake / spill; no work-stealing/wakeups; one-shot tasks.
-- **Goal**: establish **per-P semantics** and the **`runnext` fast path**.
-
-### v0.1.0 — Single-Threaded Fixed Queue
-
-_“Single loop over a fixed G array; no P, no queues.“_
-
-- **Features**: fixed `[3]G` one-shot tasks; scan → first `.Ready` → run → `.Done`; one G per cycle.
-- **Design Boundaries**: no P; no local/global run queues; no work-stealing.
-- **Goal**: establish the **G lifecycle** and the **minimal mental model**.
+See full history in [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🛣️ Roadmap
 
-- **v0.6.0** — Work Stealing
 - **v0.7.0** — Time-slice / Yield
 
 Long-term: align closer with Go runtime's GMP while keeping code educational and minimal.

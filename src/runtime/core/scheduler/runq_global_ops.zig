@@ -1,3 +1,7 @@
+// =====================================================
+// Global Queue Operations
+// =====================================================
+
 const std = @import("std");
 const tg = @import("../../tg.zig");
 
@@ -5,11 +9,7 @@ const tg = @import("../../tg.zig");
 const G = tg.G;
 const P = tg.P;
 
-// =====================================================
-// Global Queue Operations
-// =====================================================
-
-pub fn bind(comptime Self: type) type {
+pub fn bind(comptime Self: type, comptime WorkItem: type) type {
     return struct {
         /// Add a goroutine to the global run queue.
         ///
@@ -39,7 +39,7 @@ pub fn bind(comptime Self: type) type {
             var n = self.calculateBatchSize(max, local_cap_half);
 
             // Check actual available space in target processor's local queue.
-            const available = pp.runq.capacity() - pp.runq.size();
+            const available = pp.runq.available();
             if (available == 0) return null; // Local queue is full.
 
             // Ensure we have at least 1 goroutine and don't exceed available space.
@@ -65,6 +65,25 @@ pub fn bind(comptime Self: type) type {
             return batch.immediate_g;
         }
 
+        /// Convenience wrapper over `globrunqget` that returns a `WorkItem`.
+        pub fn globrunqgetWorkItem(self: *Self, p: *P) ?WorkItem {
+            if (self.globrunqget(p, 0)) |g| {
+                return .{ .g = g, .src = .Global };
+            }
+            return null;
+        }
+
+        /// Wake idle processors when new work is added to global queue.
+        /// This implements the scheduler's load balancing strategy by ensuring
+        /// idle processors can immediately pick up newly available work.
+        pub fn wakeForNewWork(self: *Self, work_count: u32) void {
+            if (self.hasIdleProcessors()) {
+                _ = self.tryWake(@min(work_count, self.getIdleCount()));
+            }
+        }
+
+        // === Private Helper Methods ===
+
         /// Calculate optimal batch size for load balancing.
         /// Matches Go's batch size calculation algorithm.
         fn calculateBatchSize(self: *Self, max: usize, local_cap_half: usize) usize {
@@ -78,15 +97,6 @@ pub fn bind(comptime Self: type) type {
             if (n < 1) n = 1; // At least one when qs > 0.
 
             return n;
-        }
-
-        /// Wake idle processors when new work is added to global queue.
-        /// This implements the scheduler's load balancing strategy by ensuring
-        /// idle processors can immediately pick up newly available work.
-        pub fn wakeForNewWork(self: *Self, work_count: u32) void {
-            if (self.hasIdleProcessors()) {
-                _ = self.tryWake(@min(work_count, self.getIdleCount()));
-            }
         }
     };
 }

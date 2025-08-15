@@ -1,5 +1,3 @@
-const std = @import("std");
-
 // =====================================================
 // Basic Scheduler Operations
 // =====================================================
@@ -34,22 +32,6 @@ pub fn bind(comptime Self: type) type {
         /// Check if there are any idle processors available.
         pub fn hasIdleProcessors(self: *const Self) bool {
             return self.npidle.load(.seq_cst) > 0;
-        }
-
-        /// Display scheduler state for debugging.
-        pub fn display(self: *const Self) void {
-            const proc_count = self.processorCount();
-            const idle_count = self.getIdleCount();
-            const g_count = self.runq.size();
-            std.debug.print("=== Scheduler Status ===\n", .{});
-            std.debug.print("Processors: {}, Idle: {}\n", .{ proc_count, idle_count });
-            std.debug.print("Global goroutines: {}\n", .{g_count});
-            self.runq.display();
-
-            for (self.processors, 0..) |*p, i| {
-                std.debug.print("P{}: ", .{i});
-                p.display();
-            }
         }
     };
 }

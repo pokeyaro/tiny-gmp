@@ -1,3 +1,7 @@
+// =====================================================
+// Local Queue Operations
+// =====================================================
+
 const std = @import("std");
 const tg = @import("../../tg.zig");
 
@@ -8,10 +12,6 @@ const shuffle = tg.lib.algo.shuffle;
 // Types
 const G = tg.G;
 const P = tg.P;
-
-// =====================================================
-// Local Queue Operations
-// =====================================================
 
 pub fn bind(comptime Self: type, comptime WorkItem: type) type {
     return struct {
@@ -105,18 +105,22 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
         /// Uses Go’s “Passive Replenishment” — once `runnext` is consumed,
         /// it stays empty until a new goroutine is scheduled there.
         /// See docs/design/en/runnext-passive-replenishment.md for details.
-        pub fn runqget(self: *Self, p: *P) WorkItem {
+        pub fn runqget(self: *Self, p: *P) ?WorkItem {
             _ = self;
 
             // Fast path: check runnext first.
             if (p.getRunnext()) |g| {
-                p.clearRunnext(); // Clear runnext, no active replenishment.
+                p.clearRunnext(); // passive replenishment: do not auto-refill.
                 return .{ .g = g, .src = .Runnext };
             }
 
             // Slow path: get from main queue.
-            const g = p.runq.dequeue();
-            return .{ .g = g, .src = .Runq };
+            if (p.runq.dequeue()) |g| {
+                return .{ .g = g, .src = .Runq };
+            }
+
+            // No local work.
+            return null;
         }
     };
 }
