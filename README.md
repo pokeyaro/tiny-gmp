@@ -45,7 +45,7 @@ zig build run  # Debug demo: runs the stress test
 
 ## 🧱 Architecture
 
-Current architecture for **v0.6.0** — designed for clarity and step-by-step learning (will evolve in future versions):
+Current architecture for **v0.7.0** — designed for clarity and step-by-step learning (will evolve in future versions):
 
 ```bash
 src/
@@ -107,7 +107,7 @@ docs/design/
 
 ## 📊 Scheduling Flow (v0.7.0)
 
-Below is the end-to-end flow for **tiny-gmp v6**, covering both creation and execution phases:
+Below is the end-to-end flow for **tiny-gmp v7**, covering both creation and execution phases:
 
 ![Tiny-GMP v7 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v7-scheduling-flow@2x.png)
 
