@@ -15,22 +15,31 @@ const P = tg.P;
 
 pub fn bind(comptime Self: type) type {
     return struct {
-        /// Run a goroutine on a processor and handle cleanup/state updates.
+        /// Execute one goroutine on a processor and handle completion/yield.
         pub fn executeGoroutine(self: *Self, p: *P, g: *G) void {
-            // Mark P running for this dispatch.
+            // Mark the processor as running for this dispatch.
             p.setStatus(.Running);
 
-            // Execute the goroutine's task.
-            executor.execute(g);
+            // Execute one timeslice of the goroutine's task.
+            const done = executor.execute(g);
 
             if (self.debug_mode) {
-                std.debug.print("P{}: G{} done\n", .{ p.getID(), g.getID() });
+                if (done) {
+                    std.debug.print("P{}: G{} done\n", .{ p.getID(), g.getID() });
+                } else {
+                    std.debug.print("[yield] P{}: G{} slice used, remaining {}/{}\n", .{ p.getID(), g.getID(), g.stepsLeft(), g.stepsTotal() });
+                }
             }
 
-            // Clean up the goroutine after execution.
-            lifecycle.destroyproc(self, g);
+            if (done) {
+                // Task completed — clean up the goroutine.
+                lifecycle.destroyproc(self, g);
+            } else {
+                // yield/preempt → tail only.
+                self.runqput(p, g, false);
+            }
 
-            // Update processor status.
+            // Update processor status after execution.
             p.syncStatus();
         }
     };

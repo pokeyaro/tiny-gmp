@@ -15,25 +15,40 @@ const P = tg.P;
 
 pub fn bind(comptime Self: type, comptime WorkItem: type) type {
     return struct {
-        /// Put goroutine on local run queue.
-        /// Uses the runnext optimization: new goroutines go to runnext first.
-        /// Handles local queue overflow by transferring half to global queue.
+        /// Enqueue a goroutine on the local run queue.
+        /// If `to_runnext` is true, attempt to place it into `p.runnext`
+        /// (the single-slot fast path executed before any queued goroutines).
+        /// If `p.runnext` is already occupied, the existing runnext is
+        /// "kicked" to the regular queue tail and the new goroutine takes its place.
+        ///
+        /// If `to_runnext` is false, the goroutine is enqueued at the tail
+        /// of the local run queue directly.
+        ///
+        /// If the local run queue is full, this falls back to `runqputslow`,
+        /// which moves half of the local queue (plus this goroutine) to the
+        /// global run queue and wakes idle processors.
         ///
         /// Go source: https://github.com/golang/go/blob/master/src/runtime/proc.go (search for "func runqput").
-        pub fn runqput(self: *Self, p: *P, g: *G) void {
-            // Fast path: use runnext if available.
-            if (!p.hasRunnext()) {
+        pub fn runqput(self: *Self, p: *P, g: *G, to_runnext: bool) void {
+            var target_g: *G = g;
+
+            if (to_runnext) {
+                // Try runnext fast-path.
+                if (!p.hasRunnext()) {
+                    p.setRunnext(g);
+                    return;
+                }
+                // Kick the old runnext to the regular queue and install the new one.
+                const old_rn = p.getRunnext().?; // must exist here
                 p.setRunnext(g);
-                return;
+                target_g = old_rn; // enqueue the previous runnext at tail
             }
 
-            // Slow path: try to add to the main queue.
-            if (p.localEnqueue(g)) {
-                return; // Successfully added to local queue.
-            }
+            // Tail enqueue (either to_runnext == false, or we are kicking the old runnext).
+            if (p.localEnqueue(target_g)) return;
 
             // Local queue is full, transfer half to global queue.
-            self.runqputslow(p, g);
+            self.runqputslow(p, target_g);
         }
 
         /// Handle local queue overflow by transferring half to global queue.

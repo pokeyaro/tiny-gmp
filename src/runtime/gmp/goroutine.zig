@@ -26,6 +26,32 @@ pub const GStatus = enum {
     }
 };
 
+// v7: logical timeslice scaffolding as an extension namespace.
+const StepsExt = struct {
+    pub fn setSteps(self: *G, steps: u16) void {
+        const s: u16 = if (steps == 0) 1 else steps;
+        self.total_steps = s;
+        self.remaining_steps = s;
+    }
+
+    pub fn stepsLeft(self: *const G) u16 {
+        return self.remaining_steps;
+    }
+
+    pub fn stepsTotal(self: *const G) u16 {
+        return self.total_steps;
+    }
+
+    pub fn consume(self: *G, n: u16) bool {
+        if (self.remaining_steps <= n) {
+            self.remaining_steps = 0;
+            return true;
+        }
+        self.remaining_steps -= n;
+        return false;
+    }
+};
+
 /// G represents a goroutine, the basic unit of execution.
 /// This follows Go's GMP model where G is the goroutine.
 ///
@@ -42,6 +68,15 @@ pub const G = struct {
 
     /// Link to next goroutine in scheduling queues.
     schedlink: ?*G = null,
+
+    /// Total logical steps the goroutine should run before completing.
+    total_steps: u16 = 1,
+
+    /// Remaining logical steps for the goroutine in the current run.
+    remaining_steps: u16 = 1,
+
+    /// Mixin methods from StepsExt (provides helper functions for step tracking).
+    pub usingnamespace StepsExt;
 
     /// Initialize a new Goroutine with an auto-incremented ID and given task.
     pub fn init(gid: u32, task: ?*const fn () void) G {

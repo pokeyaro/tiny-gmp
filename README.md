@@ -21,42 +21,19 @@ zig build run  # Debug demo: runs the stress test
 > Release builds call the production API, but `main.zig` intentionally sets `task_functions = null` as a placeholder and will error. \
 > To run a production build, pass your own tasks to `app.start(...)` or modify `main.zig`.
 
-## 🎉 What’s New in v0.6.0
+## 🎉 What’s New in v0.7.0
 
-**Core theme:** introduce **work-stealing** with clear victim scanning and capacity checks.
+**Core theme:** introduce **time-slice execution** with cooperative yielding.
 
-- **Work-stealing loop**: each idle P attempts up to `stealTries × nproc` victim scans per steal attempt.
-
-- **Victim selection**:
-
-  - Randomized starting index (`cheapRandIndex`).
-
-  - Ring scan order, skipping `thief` itself.
-
-  - Iteration stops after one full round.
-
-- **Capacity-aware stealing**:
-
-  - Skip victim if thief’s local run queue is full.
-
-  - Skip victim if it has no runnable work.
-
-- **Steal operation**:
-
-  - Steal **half** of victim’s run queue (capped by thief’s available capacity).
-
-  - **No** `runnext` **stealing** — intentionally simpler than Go’s runtime.
-
-  - Batch-move with defensive capacity checks.
-
-- **Refactor**:
-
-  - `refactor(scheduler)`: **unify work finding into** `findRunnable` — integrates global queue intake and stealing into a single, consistent path.
+- **Time-slice / quantum execution**: each goroutine runs for a fixed logical budget (`quantum_ops`); if unfinished, it yields.
+- **`execute` → `executeSlice` → `executeCore` layering**: public API returns `bool` (finished?) and keeps state/metrics hooks isolated.
+- **Yield path**: “run a small step → yield → enqueue at local tail” to preserve fairness (no preemption yet).
+- **Refactor**: unified `runqput` semantics with a `to_runnext` flag for Go-style compatibility (new G may occupy `runnext`; the old one is demoted to the queue when necessary).
 
 ## ✨ Features (current)
 
-> Single-threaded, educational build; **no work-stealing**, **no preemption** (yet). \
-> Now with **deterministic work-stealing** and integrated work-finding logic.
+> Single-threaded, educational build; **cooperative time-slicing**, **no preemption** (yet). \
+> Now with `runnext` fast-path, fair tail enqueue, and step-based execution tracking.
 
 - G (goroutine) with lifecycle: `Ready → Running → Done`
 - P (processor) with `runnext` fast path + local run queue
@@ -68,7 +45,7 @@ zig build run  # Debug demo: runs the stress test
 
 ## 🧱 Architecture
 
-Current architecture for **v0.6.0** — designed for clarity and step-by-step learning (will evolve in future versions):
+Current architecture for **v0.7.0** — designed for clarity and step-by-step learning (will evolve in future versions):
 
 ```bash
 src/
@@ -128,37 +105,30 @@ docs/design/
 └── work-stealing-strategy.md
 ```
 
-## 📊 Scheduling Flow (v0.6.0)
+## 📊 Scheduling Flow (v0.7.0)
 
-Below is the end-to-end flow for **tiny-gmp v6**, covering both creation and execution phases:
+Below is the end-to-end flow for **tiny-gmp v7**, covering both creation and execution phases:
 
-![Tiny-GMP v6 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v6-scheduling-flow@2x.png)
+![Tiny-GMP v7 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v7-scheduling-flow@2x.png)
 
 ## 🖥️ Example Output
 
 ```text
-=== Tiny-GMP V6 - STRESS TEST ===
+=== Tiny-GMP V7 - STRESS TEST ===
 ...
---- Round 2001 ---
-[steal] P0 scan(start=1): P1 -> P2 -> P3 -> P4 -> P0(skip) (all empty)
-[pidle] +P0 (idle=1)
-[steal] P1 scan(start=4): P4 -> P0 -> P1(skip) -> P2 -> P3 (all empty)
-[pidle] +P1 (idle=2)
-[steal] P2 scan(start=4): P4 -> P0 -> P1 -> P2(skip) -> P3 (all empty)
-[pidle] +P2 (idle=3)
-[steal] P3 scan(start=3): P3(skip) -> P4 -> P0 -> P1 -> P2 (all empty)
-[pidle] +P3 (idle=4)
-[steal] P4 scan(start=2): P2 -> P3 -> P4(skip) -> P0 -> P1 (all empty)
-[pidle] +P4 (idle=5)
-All processors idle and no work, scheduler stopping
-
-=== Final Status ===
+--- Round 1 ---
+P0: Executing G9996 (from runnext)
+  -> K8s: Tainting node 'worker-3' as unschedulable
+[yield] P0: G9996 slice used, remaining 1/2
 ...
-
-=== Stress Test Completed Successfully ===
+--- Round 195 ---
+P0: Executing G9996 (from runq)
+  -> K8s: Tainting node 'worker-3' as unschedulable
+P0: G9996 done
+...
 ```
 
-See full run in [docs/outputs/example-v0.6.0.txt](./docs/outputs/example-v0.6.0.txt).
+See full run in [docs/outputs/example-v0.7.0.txt](./docs/outputs/example-v0.7.0.txt).
 
 ## 📜 Version History
 
@@ -166,7 +136,7 @@ See full history in [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🛣️ Roadmap
 
-- **v0.7.0** — Time-slice / Yield
+- **v0.8.0** — Preemption at safe points
 
 Long-term: align closer with Go runtime's GMP while keeping code educational and minimal.
 

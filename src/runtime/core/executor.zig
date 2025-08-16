@@ -10,35 +10,61 @@ const tg = @import("../tg.zig");
 // Types
 const G = tg.G;
 
-// =====================================================
-// Goroutine Execution Engine
-// =====================================================
+// ==========================
+// Public API
+// ==========================
 
-/// Public entry: run a goroutine once.
-pub fn execute(g: *G) void {
-    executeCore(g);
+/// Execute exactly one timeslice (quantum = 1) of the goroutine.
+/// Returns true if the goroutine has completed; false if it yielded.
+pub fn execute(g: *G) bool {
+    return executeSlice(g, 1);
 }
 
-/// Core executor: status switch + call task.
-fn executeCore(g: *G) void {
+/// Execute one logical timeslice with a given quantum (>=1).
+/// Orchestrates state checks, start/complete hooks, and status transitions.
+/// Returns true if the goroutine has completed; false if it yielded.
+pub fn executeSlice(g: *G, quantum_ops: u16) bool {
     // Pre-check: must be Ready and have a task.
     if (!g.isExecutionReady()) {
-        std.debug.print("Warning: G{} not ready (status={s}, hasTask={})\n", .{ g.getID(), g.getStatus().toString(), g.hasTask() });
-        return;
+        std.debug.print(
+            "Warning: G{} not ready (status={s}, hasTask={})\n",
+            .{ g.getID(), g.getStatus().toString(), g.hasTask() },
+        );
+        // Treat as completed to avoid re-queuing a broken G.
+        g.setStatus(.Done);
+        return true;
     }
 
-    // Running → call task → Done.
+    // Run one slice.
     g.setStatus(.Running);
+    onTaskStart(g);
 
-    onTaskStart(g); // hook: profiling/tracing (no-op for now).
+    const finished = executeCore(g, quantum_ops);
 
-    const task = g.getTask().?;
-    task();
+    onTaskComplete(g);
+    g.setStatus(if (finished) .Done else .Ready);
 
-    onTaskComplete(g); // hook: cleanup/metrics (no-op for now).
-
-    g.setStatus(.Done);
+    return finished;
 }
+
+// ==========================
+// Core primitive
+// ==========================
+
+/// Core execution primitive: call the task once (one “work unit”),
+/// then consume `quantum_ops` logical steps. No status transitions here.
+/// Returns true if the goroutine has completed; false otherwise.
+fn executeCore(g: *G, quantum_ops: u16) bool {
+    const task = g.getTask().?;
+    task(); // one unit of work (for v7, one call == one step of work)
+
+    const q: u16 = if (quantum_ops == 0) 1 else quantum_ops;
+    return g.consume(q);
+}
+
+// ==========================
+// Hooks (no-op for now)
+// ==========================
 
 /// Hook before task execution (placeholder for profiling/tracing).
 fn onTaskStart(g: *G) void {
