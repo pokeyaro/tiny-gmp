@@ -26,8 +26,11 @@ pub fn newproc(sched: *schedt, p: *P, func: ?*const fn () void) !void {
     const g = try sched.allocator.create(G);
     g.* = G.init(gid, func);
 
-    // Put on specified P's local queue (handles overflow internally).
-    sched.runqput(p, g);
+    // v7: deterministic per-G work length: 1..5
+    g.setSteps(1 + @as(u16, @intCast(gid % 5)));
+
+    // Put on specified P's local queue with runnext preference.
+    sched.runqput(p, g, true);
 
     // Only after scheduler started, wake one idle P (if any).
     if (sched.main_started) {

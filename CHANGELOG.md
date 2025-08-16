@@ -6,6 +6,14 @@
 
 ---
 
+### v0.7.0 — Time-Slice & Yield
+
+_“One step at a time.”_
+
+- **Features**: goroutines now run in deterministic **time-slices (quantum=1)**, with per-G step accounting (`stepsTotal`, `stepsLeft`, `consume`).
+- **Scheduling**: unified `runqput` with `to_runnext` **flag**, tail re-enqueue on yield, and fairness preserved across goroutines.
+- **Goal**: introduce **cooperative time-slicing** as a foundation for **preemption and multi-M scheduling** in v0.8.
+
 ### v0.6.0 — Work-Stealing Arrives
 
 _“Idle Ps now go hunting.”_
