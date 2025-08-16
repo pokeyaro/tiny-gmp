@@ -11,7 +11,11 @@ zig-out/
 
 # Log files
 *.log
+*.txt
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Other files
+*.sh
