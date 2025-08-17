@@ -5,8 +5,8 @@
 pub fn bind(comptime Self: type) type {
     return struct {
         /// Generate next unique goroutine ID (thread-safe).
-        pub fn nextGID(self: *Self) u32 {
-            return self.goidgen.fetchAdd(1, .seq_cst) + 1;
+        pub fn nextGID(self: *Self) u64 {
+            return self.goidgen.fetchAdd(1, .seq_cst);
         }
 
         /// Check if global queue is empty.

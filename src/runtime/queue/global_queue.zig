@@ -17,17 +17,24 @@ const G = tg.G;
 /// Batch result for efficient goroutine transfer between queues.
 /// Simplified design using direct G.schedlink chaining.
 pub const GlobalRunqBatch = struct {
+    pub const Self = @This();
+
     immediate_g: ?*G = null, // First goroutine to run immediately.
     batch_head: ?*G = null, // Head of the remaining batch (linked via G.schedlink).
     batch_count: usize = 0, // Number of goroutines in the linked batch.
 
+    /// Constructor.
+    pub fn init() Self {
+        return .{};
+    }
+
     /// Returns true if both immediate_g and batch_head are null.
-    pub fn isEmpty(self: *const GlobalRunqBatch) bool {
+    pub fn isEmpty(self: *const Self) bool {
         return self.immediate_g == null and self.batch_head == null;
     }
 
     /// Total goroutines in this batch (immediate + linked batch).
-    pub fn totalCount(self: *const GlobalRunqBatch) usize {
+    pub fn totalCount(self: *const Self) usize {
         const immediate_count: usize = if (self.immediate_g != null) 1 else 0;
         return immediate_count + self.batch_count;
     }
@@ -53,7 +60,7 @@ pub const GlobalQueue = struct {
 
     /// Initialize a new empty global queue.
     pub fn init() Self {
-        return Self{
+        return .{
             .head = null,
             .tail = null,
             .count = 0,
@@ -127,7 +134,7 @@ pub const GlobalQueue = struct {
 
     /// Get a batch of goroutines from the global queue.
     pub fn dequeueBatch(self: *Self, n: usize) GlobalRunqBatch {
-        var out = GlobalRunqBatch{};
+        var out = GlobalRunqBatch.init();
         if (self.isEmpty() or n == 0) return out;
 
         // Ensure we don't take more than available.

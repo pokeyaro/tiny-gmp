@@ -14,52 +14,47 @@ const G = tg.G;
 // Public API
 // ==========================
 
-/// Execute exactly one timeslice (quantum = 1) of the goroutine.
+/// Execute one scheduling slice for the goroutine.
 /// Returns true if the goroutine has completed; false if it yielded.
 pub fn execute(g: *G) bool {
-    return executeSlice(g, 1);
+    return executeSlice(g);
 }
 
-/// Execute one logical timeslice with a given quantum (>=1).
-/// Orchestrates state checks, start/complete hooks, and status transitions.
-/// Returns true if the goroutine has completed; false if it yielded.
-pub fn executeSlice(g: *G, quantum_ops: u16) bool {
-    // Pre-check: must be Ready and have a task.
+/// Execute one logical slice.
+/// Returns `true` if the goroutine has completed; `false` if it yielded.
+pub fn executeSlice(g: *G) bool {
+    // Precondition: must be Ready and have a task.
     if (!g.isExecutionReady()) {
-        std.debug.print(
-            "Warning: G{} not ready (status={s}, hasTask={})\n",
-            .{ g.getID(), g.getStatus().toString(), g.hasTask() },
-        );
-        // Treat as completed to avoid re-queuing a broken G.
         g.setStatus(.Done);
         return true;
     }
 
-    // Run one slice.
+    // Safepoint (before calling the task): honor preemption request.
+    // If preempted, we do NOT invoke the task body; the runner will tail-enqueue it.
+    if (g.consumePreempt()) {
+        return false;
+    }
+
+    // Run one task call.
     g.setStatus(.Running);
     onTaskStart(g);
 
-    const finished = executeCore(g, quantum_ops);
+    executeCore(g);
 
     onTaskComplete(g);
-    g.setStatus(if (finished) .Done else .Ready);
+    g.setStatus(.Done);
 
-    return finished;
+    return true;
 }
 
 // ==========================
 // Core primitive
 // ==========================
 
-/// Core execution primitive: call the task once (one “work unit”),
-/// then consume `quantum_ops` logical steps. No status transitions here.
-/// Returns true if the goroutine has completed; false otherwise.
-fn executeCore(g: *G, quantum_ops: u16) bool {
-    const task = g.getTask().?;
-    task(); // one unit of work (for v7, one call == one step of work)
-
-    const q: u16 = if (quantum_ops == 0) 1 else quantum_ops;
-    return g.consume(q);
+/// Invoke the task function once.
+fn executeCore(g: *G) void {
+    const func = g.getTask().?;
+    func();
 }
 
 // ==========================

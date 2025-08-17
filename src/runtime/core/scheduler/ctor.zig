@@ -10,6 +10,7 @@ const scheduler_config = tg.config.scheduler;
 
 // Types
 const P = tg.P;
+const lifecycle = tg.lifecycle;
 const GlobalQueue = tg.queue.global_queue.GlobalQueue;
 
 pub fn bind(comptime Self: type) type {
@@ -28,13 +29,11 @@ pub fn bind(comptime Self: type) type {
             const nproc = scheduler_config.getProcessorCount();
             const processors = try createProcessors(allocator, nproc);
 
-            return Self{
+            return .{
                 .runq = GlobalQueue.init(),
                 .processors = processors,
                 .nproc = nproc,
                 .pidle = null,
-                .npidle = std.atomic.Value(u32).init(0),
-                .goidgen = std.atomic.Value(u32).init(0),
                 .allocator = allocator,
                 .debug_mode = debug_mode,
             };
@@ -42,8 +41,6 @@ pub fn bind(comptime Self: type) type {
 
         /// Clean up scheduler resources.
         pub fn deinit(self: *Self) void {
-            const lifecycle = tg.lifecycle;
-
             // Clean up global queue.
             while (self.runq.dequeue()) |g| {
                 lifecycle.destroyproc(self, g);
