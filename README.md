@@ -21,31 +21,32 @@ zig build run  # Debug demo: runs the stress test
 > Release builds call the production API, but `main.zig` intentionally sets `task_functions = null` as a placeholder and will error. \
 > To run a production build, pass your own tasks to `app.start(...)` or modify `main.zig`.
 
-## 🎉 What’s New in v0.7.0
+## 🎉 What’s New in v0.8.0
 
-**Core theme:** introduce **time-slice execution** with cooperative yielding.
+**Core theme:** introduce **safe-point preemption** so the scheduler can cut in before a task call.
 
-- **Time-slice / quantum execution**: each goroutine runs for a fixed logical budget (`quantum_ops`); if unfinished, it yields.
-- **`execute` → `executeSlice` → `executeCore` layering**: public API returns `bool` (finished?) and keeps state/metrics hooks isolated.
-- **Yield path**: “run a small step → yield → enqueue at local tail” to preserve fairness (no preemption yet).
-- **Refactor**: unified `runqput` semantics with a `to_runnext` flag for Go-style compatibility (new G may occupy `runnext`; the old one is demoted to the queue when necessary).
+- **Safe-point preemption:** `G.requestPreempt()` sets a flag; `G.consumePreempt()` checks & clears it at the call boundary; if set, we **don’t call the task** and requeue at **local tail** via `runqputTailWithReason(.Preempt)`.
+- **Execution layering kept:** `execute → executeSlice → executeCore`; the preemption check lives in `executeSlice` right before calling `executeCore`.
+- **Diagnostics:** `YieldReason` enum + per-G `last_yield_reason` with `getLastYieldReason()/Str()` helpers; debug sampling hook `(gid % 29 == 0)` to inject observable preempts.
+- **Refactor/consistency:** `Self` receivers in G/P, added `P.getStatus`, and a reasoned enqueue wrapper `runqputTailWithReason()` (tags + logs) without changing `runqput` semantics.
+- **Cleanup:** removed v7 `step/quantum` scaffolding.
 
 ## ✨ Features (current)
 
-> Single-threaded, educational build; **cooperative time-slicing**, **no preemption** (yet). \
-> Now with `runnext` fast-path, fair tail enqueue, and step-based execution tracking.
+> Single-threaded, educational build; **safe-point preemption** at task call boundaries; no arbitrary-point/signal preemption; single M.
 
 - G (goroutine) with lifecycle: `Ready → Running → Done`
 - P (processor) with `runnext` fast path + local run queue
 - Global run queue with **batch intake** into local queues
 - **Local overflow → global** with **immediate wakeups**
 - **Pidle stack** with `PStatus.{Running, Idle, Parked}`
-- **Work-stealing** with random start & capacity-based victim selection
-- Deterministic demo output & rich debug prints
+- **Work-stealing** with randomized victim scan & capacity checks
+- **Safe-point preemption** (`requestPreempt/consumePreempt`), tail re-enqueue with reason tagging
+- Deterministic demo output & debug prints
 
 ## 🧱 Architecture
 
-Current architecture for **v0.7.0** — designed for clarity and step-by-step learning (will evolve in future versions):
+Current architecture for **v0.8.0** — designed for clarity and step-by-step learning (will evolve in future versions):
 
 ```bash
 src/
@@ -105,30 +106,41 @@ docs/design/
 └── work-stealing-strategy.md
 ```
 
-## 📊 Scheduling Flow (v0.7.0)
+## 📊 Scheduling Flow (v0.8.0)
 
-Below is the end-to-end flow for **tiny-gmp v7**, covering both creation and execution phases:
+Below is the end-to-end flow for **tiny-gmp v8**, covering both creation and execution phases:
 
-![Tiny-GMP v7 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v7-scheduling-flow@2x.png)
+![Tiny-GMP v8 Goroutine Scheduling](./docs/diagrams/tiny-gmp-v8-scheduling-flow@2x.png)
 
 ## 🖥️ Example Output
 
 ```text
-=== Tiny-GMP V7 - STRESS TEST ===
+=== Tiny-GMP V8 - STRESS TEST ===
 ...
---- Round 1 ---
-P0: Executing G9996 (from runnext)
-  -> K8s: Tainting node 'worker-3' as unschedulable
-[yield] P0: G9996 slice used, remaining 1/2
+--- Round 6 ---
+P0: Executing G9046 (from runq)
+  -> Database query: `SELECT * FROM users;`
+P0: G9046 done
+P1: Executing G9047 (from runq)
+  -> HTTP GET request to 'api.example.com'
+P1: G9047 done
+P2: Executing G9048 (from runq)
+[yield] P2: G9048 (Preempt) -> tail
 ...
 --- Round 195 ---
-P0: Executing G9996 (from runq)
-  -> K8s: Tainting node 'worker-3' as unschedulable
-P0: G9996 done
+P0: Executing G9106 (from runq)
+  -> Database query: `SELECT * FROM users;`
+P0: G9106 done
+P1: Executing G9077 (from runq)
+  -> Vite: Triggering hot module replacement for App.vue
+P1: G9077 done
+P2: Executing G9048 (from runq)
+  -> Image processing: resize 1920x1080 -> 640x480
+P2: G9048 done
 ...
 ```
 
-See full run in [docs/outputs/example-v0.7.0.txt](./docs/outputs/example-v0.7.0.txt).
+See full run in [docs/outputs/example-v0.8.0.txt](./docs/outputs/example-v0.8.0.txt).
 
 ## 📜 Version History
 
@@ -136,7 +148,7 @@ See full history in [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🛣️ Roadmap
 
-- **v0.8.0** — Preemption at safe points
+- **v0.9.0** — Park/Unpark + Timer-Driven Preemption
 
 Long-term: align closer with Go runtime's GMP while keeping code educational and minimal.
 

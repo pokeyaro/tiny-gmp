@@ -6,6 +6,14 @@
 
 ---
 
+### v0.8.0 — Safe-Point Preemption
+
+_“The scheduler can now take the wheel.”_
+
+- **Features**: `G` gains `SchedCtx.preempt`; `requestPreempt()` sets flag; `consumePreempt()` checks & clears. Add `YieldReason` for diagnostics.
+- **Scheduling**: `executeSlice()` checks preempt before run; tail-enqueue with `runqputTailWithReason`; sampled `g.id % 29 == 0` triggers debug preempt.
+- **Goal**: introduce cooperative preemption at call boundaries; remove step counters; pave path for multi-M.
+
 ### v0.7.0 — Time-Slice & Yield
 
 _“One step at a time.”_
