@@ -20,14 +20,14 @@ pub fn bind(comptime Self: type) type {
             // Mark the processor as running for this dispatch.
             p.setStatus(.Running);
 
-            // Execute one timeslice of the goroutine's task.
+            // Execute one scheduling slice.
             const done = executor.execute(g);
 
             if (self.debug_mode) {
                 if (done) {
                     std.debug.print("P{}: G{} done\n", .{ p.getID(), g.getID() });
                 } else {
-                    std.debug.print("[yield] P{}: G{} slice used, remaining {}/{}\n", .{ p.getID(), g.getID(), g.stepsLeft(), g.stepsTotal() });
+                    std.debug.print("[yield] P{}: G{} ({s})\n", .{ p.getID(), g.getID(), g.lastYieldReasonStr() });
                 }
             }
 

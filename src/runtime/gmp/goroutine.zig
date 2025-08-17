@@ -173,4 +173,16 @@ pub const G = struct {
         self.sched.last_yield_reason = .Preempt;
         return true;
     }
+
+    // === Diagnostics helpers ===
+
+    /// Return last yield reason (enum).
+    pub fn lastYieldReason(self: *const Self) YieldReason {
+        return self.sched.last_yield_reason;
+    }
+
+    /// Return last yield reason as string.
+    pub fn lastYieldReasonStr(self: *const Self) []const u8 {
+        return self.lastYieldReason().toString();
+    }
 };

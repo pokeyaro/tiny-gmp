@@ -59,7 +59,6 @@ pub fn bind(comptime Self: type) type {
             // Original cleanup.
             self.runq.deinit();
             self.allocator.free(self.processors);
-            self.processors = self.processors[0..0];
         }
     };
 }
