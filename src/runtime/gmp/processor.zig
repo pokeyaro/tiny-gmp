@@ -59,7 +59,7 @@ pub const P = struct {
 
     /// Create a new processor with an empty run queue and a unique ID.
     pub fn init(pid: u32) Self {
-        return Self{
+        return .{
             .id = pid,
             .status = .Idle,
             .runq = LocalQueue.init(),

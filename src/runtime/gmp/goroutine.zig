@@ -59,7 +59,7 @@ pub const G = struct {
     // === Core fields ===
 
     /// Unique goroutine ID.
-    id: u32,
+    id: u64,
 
     /// Current execution status.
     status: GStatus = .Ready,
@@ -76,8 +76,8 @@ pub const G = struct {
     // === Constructors ===
 
     /// Initialize a new Goroutine with an auto-incremented ID and given task.
-    pub fn init(gid: u32, task: ?*const fn () void) Self {
-        return Self{
+    pub fn init(gid: u64, task: ?*const fn () void) Self {
+        return .{
             .id = gid,
             .status = .Ready,
             .task = task,
@@ -89,7 +89,7 @@ pub const G = struct {
     // === Accessors: identity ===
 
     /// Get goroutine ID.
-    pub fn getID(self: *const Self) u32 {
+    pub fn getID(self: *const Self) u64 {
         return self.id;
     }
 
