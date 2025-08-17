@@ -12,9 +12,22 @@ const shuffle = tg.lib.algo.shuffle;
 // Types
 const G = tg.G;
 const P = tg.P;
+const YieldReason = tg.gmp.goroutine.YieldReason;
 
 pub fn bind(comptime Self: type, comptime WorkItem: type) type {
     return struct {
+        /// Tail-enqueue a goroutine and record why it yielded/preempted.
+        /// This is a thin wrapper over `runqput(p, g, false)`.
+        pub fn runqputTailWithReason(self: *Self, p: *P, g: *G, reason: YieldReason) void {
+            g.setLastYieldReason(reason);
+
+            if (self.debug_mode) {
+                std.debug.print("[yield] P{}: G{} ({s}) -> tail\n", .{ p.getID(), g.getID(), g.getLastYieldReasonStr() });
+            }
+
+            self.runqput(p, g, false);
+        }
+
         /// Enqueue a goroutine on the local run queue.
         /// If `to_runnext` is true, attempt to place it into `p.runnext`
         /// (the single-slot fast path executed before any queued goroutines).

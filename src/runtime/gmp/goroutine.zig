@@ -160,29 +160,44 @@ pub const G = struct {
 
     /// Mark this goroutine to be preempted at the next safe point.
     pub fn requestPreempt(self: *Self) void {
-        self.sched.preempt = true;
+        self.setPreemptRequested(true);
     }
 
     /// Consume a pending preemption request at a safe point.
     /// Returns true if the goroutine was marked for preemption.
     pub fn consumePreempt(self: *Self) bool {
-        if (!self.sched.preempt) {
+        if (!self.isPreemptRequested()) {
             return false;
         }
-        self.sched.preempt = false;
-        self.sched.last_yield_reason = .Preempt;
+        self.setPreemptRequested(false);
+        self.setLastYieldReason(.Preempt);
         return true;
     }
 
-    // === Diagnostics helpers ===
+    /// Is preemption currently requested?
+    pub fn isPreemptRequested(self: *const Self) bool {
+        return self.sched.preempt;
+    }
+
+    /// Set/clear the preemption request flag.
+    pub fn setPreemptRequested(self: *Self, v: bool) void {
+        self.sched.preempt = v;
+    }
+
+    // === Scheduling diagnostics helpers ===
 
     /// Return last yield reason (enum).
-    pub fn lastYieldReason(self: *const Self) YieldReason {
+    pub fn getLastYieldReason(self: *const Self) YieldReason {
         return self.sched.last_yield_reason;
     }
 
+    /// Set last yield reason.
+    pub fn setLastYieldReason(self: *Self, r: YieldReason) void {
+        self.sched.last_yield_reason = r;
+    }
+
     /// Return last yield reason as string.
-    pub fn lastYieldReasonStr(self: *const Self) []const u8 {
-        return self.lastYieldReason().toString();
+    pub fn getLastYieldReasonStr(self: *const Self) []const u8 {
+        return self.getLastYieldReason().toString();
     }
 };
