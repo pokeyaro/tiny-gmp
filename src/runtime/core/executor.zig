@@ -53,8 +53,8 @@ pub fn executeSlice(g: *G) bool {
 
 /// Invoke the task function once.
 fn executeCore(g: *G) void {
-    const task = g.getTask().?;
-    task();
+    const func = g.getTask().?;
+    func();
 }
 
 // ==========================
