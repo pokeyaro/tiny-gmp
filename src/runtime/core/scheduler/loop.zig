@@ -23,6 +23,9 @@ pub fn bind(comptime Self: type) type {
             var round: u32 = 1;
 
             while (true) {
+                // advance the scheduler timeline and maybe run a preemption pass
+                self.onRoundTick();
+
                 // Early exit: no global work and all P are parked on pidle.
                 if (self.allPIdleAndRunqEmpty()) {
                     if (self.debug_mode) {

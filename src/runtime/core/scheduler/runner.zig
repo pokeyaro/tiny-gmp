@@ -20,8 +20,8 @@ pub fn bind(comptime Self: type) type {
             // Mark the processor as running for this dispatch.
             p.setStatus(.Running);
 
-            // v0.8: inject a preemption request (temporary, stable sampling for observability)
-            if (self.debug_mode and (g.getID() % 29 == 0) and (g.getLastYieldReason() != .Preempt) and !g.isPreemptRequested()) {
+            // dispatch-time injection hook.
+            if (self.shouldInjectPreemptNow(g)) {
                 g.requestPreempt();
             }
 

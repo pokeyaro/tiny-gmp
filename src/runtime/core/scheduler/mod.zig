@@ -108,6 +108,16 @@ pub const schedt = struct {
     /// Controls debug output, state validation, and verbose logging.
     debug_mode: bool = false,
 
+    // === Scheduling timeline state ===
+    /// Global tick counter, incremented at the start of every scheduling round.
+    ticks: u64 = 0,
+
+    /// How many ticks between each preemption pass (teaching version default: 7).
+    preempt_period: u32 = 7,
+
+    /// Next tick at which a preemption pass should run.
+    next_preempt_tick: u64 = 7,
+
     // === Mix in partials ===
 
     pub usingnamespace @import("ctor.zig").bind(Self); // initialization & destruction
@@ -118,6 +128,7 @@ pub const schedt = struct {
     pub usingnamespace @import("runner.zig").bind(Self); // run & finalize goroutine execution
     pub usingnamespace @import("steal_work.zig").bind(Self, WorkItem); // work stealing logic (steal tasks from other Ps)
     pub usingnamespace @import("find_work.zig").bind(Self, WorkItem); // locate runnable work items
+    pub usingnamespace @import("timer.zig").bind(Self); // scheduling timeline: tick management + periodic preemption
     pub usingnamespace @import("loop.zig").bind(Self); // main scheduling loop
     pub usingnamespace @import("display.zig").bind(Self); // display & debug utilities
 };
