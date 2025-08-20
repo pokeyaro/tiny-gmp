@@ -89,9 +89,15 @@ pub const LocalQueue = struct {
     }
 
     /// Remove and return the next goroutine from the queue.
-    /// Returns null if queue is empty.
+    /// Returns null if the queue is empty.
     pub fn dequeue(self: *Self) ?*G {
         return self.queue.dequeue();
+    }
+
+    /// Peek the front goroutine without dequeuing it.
+    /// Returns null if the queue is empty.
+    pub fn peekFront(self: *const Self) ?*G {
+        return self.queue.front();
     }
 
     /// Clear all goroutines from the queue.

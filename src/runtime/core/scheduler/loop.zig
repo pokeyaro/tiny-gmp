@@ -23,13 +23,10 @@ pub fn bind(comptime Self: type) type {
             var round: u32 = 1;
 
             while (true) {
-                // advance the scheduler timeline and maybe run a preemption pass
-                self.onRoundTick();
-
                 // Early exit: no global work and all P are parked on pidle.
                 if (self.allPIdleAndRunqEmpty()) {
                     if (self.debug_mode) {
-                        std.debug.print("All processors idle and no work, scheduler stopping\n", .{});
+                        std.debug.print("\nAll processors idle and no work, scheduler stopping!\n", .{});
                     }
                     break;
                 }
@@ -37,6 +34,9 @@ pub fn bind(comptime Self: type) type {
                 if (self.debug_mode) {
                     std.debug.print("\n--- Round {} ---\n", .{round});
                 }
+
+                // advance the scheduler timeline and maybe run a preemption pass
+                self.onRoundTick();
 
                 // Iterate all processors.
                 for (self.processors) |*p| {

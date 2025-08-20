@@ -133,6 +133,15 @@ pub const P = struct {
         self.runnext = null;
     }
 
+    // === Accessors: local read-only ===
+
+    /// Prefer runnext; otherwise peek the local run queue front (view-only).
+    /// Returns null if neither exists. Does NOT mutate any state.
+    pub fn previewLocalNext(self: *const Self) ?*G {
+        if (self.getRunnext()) |g| return g; // does not consume runnext
+        return self.runq.peekFront(); // view-only, no dequeue
+    }
+
     // === Accessors: local run queue ===
 
     /// Try to add a goroutine to the local run queue.

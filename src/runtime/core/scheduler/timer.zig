@@ -34,18 +34,19 @@ pub fn bind(comptime Self: type) type {
                 );
             }
 
-            // iterate over all processors and mark runnext if available
+            // iterate over all processors and mark one local candidate per P
             for (self.processors) |*p| {
-                if (p.getRunnext()) |g| {
-                    if (!g.isPreemptRequested()) {
-                        g.requestPreempt();
+                const g = p.previewLocalNext() orelse continue; // view-only
 
-                        if (self.debug_mode) {
-                            std.debug.print(
-                                "[preemptor] mark G{} (runnext of P{})\n",
-                                .{ g.getID(), p.getID() },
-                            );
-                        }
+                if (!g.isPreemptRequested()) {
+                    g.requestPreempt();
+
+                    if (self.debug_mode) {
+                        const src = if (p.hasRunnext()) "runnext" else "runq-front";
+                        std.debug.print(
+                            "[preemptor] mark G{} (P{} {s})\n",
+                            .{ g.getID(), p.getID(), src },
+                        );
                     }
                 }
             }
