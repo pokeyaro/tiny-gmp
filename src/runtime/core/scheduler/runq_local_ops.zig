@@ -4,6 +4,7 @@
 
 const std = @import("std");
 const tg = @import("../../tg.zig");
+const Types = @import("types.zig");
 
 // Modules
 const local_queue = tg.queue.local_queue;
@@ -12,9 +13,10 @@ const shuffle = tg.lib.algo.shuffle;
 // Types
 const G = tg.G;
 const P = tg.P;
+const WorkItem = Types.WorkItem;
 const YieldReason = tg.gmp.goroutine.YieldReason;
 
-pub fn bind(comptime Self: type, comptime WorkItem: type) type {
+pub fn bind(comptime Self: type) type {
     return struct {
         /// Tail-enqueue a goroutine and record why it yielded/preempted.
         /// This is a thin wrapper over `runqput(p, g, false)`.

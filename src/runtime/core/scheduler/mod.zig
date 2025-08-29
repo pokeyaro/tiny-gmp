@@ -6,53 +6,12 @@
 
 const std = @import("std");
 const tg = @import("../../tg.zig");
-
-// Modules
-const scheduler_config = tg.config.scheduler;
-const local_queue = tg.queue.local_queue;
-const shuffle = tg.lib.algo.shuffle;
-const lifecycle = tg.lifecycle;
+const Types = @import("types.zig");
 
 // Types
-const G = tg.G;
 const P = tg.P;
+const TimerEntry = Types.TimerEntry;
 const GlobalQueue = tg.queue.global_queue.GlobalQueue;
-const SchedulerConfig = scheduler_config.SchedulerConfig;
-
-/// Source of a goroutine when it gets selected to run.
-pub const GSrc = enum {
-    Runnext,
-    Runq,
-    Global,
-
-    /// Convert a GSrc enum to a human-readable string.
-    pub fn toString(self: GSrc) []const u8 {
-        return switch (self) {
-            .Runnext => "runnext",
-            .Runq => "runq",
-            .Global => "global",
-        };
-    }
-};
-
-/// Result type returned by runqget function.
-/// Contains the goroutine and information about its source.
-pub const WorkItem = struct {
-    pub const Self = @This();
-
-    g: *G,
-    src: GSrc,
-
-    /// Typed source accessor.
-    pub fn source(self: Self) GSrc {
-        return self.src;
-    }
-
-    /// Human-readable source label.
-    pub fn sourceName(self: Self) []const u8 {
-        return self.src.toString();
-    }
-};
 
 // =====================================================
 // Scheduler Implementation
@@ -109,25 +68,31 @@ pub const schedt = struct {
     debug_mode: bool = false,
 
     // === Scheduling timeline state ===
+
     /// Global tick counter, incremented at the start of every scheduling round.
     ticks: u64 = 0,
 
-    /// How many ticks between each preemption pass (teaching version default: 7).
+    /// How many ticks between each preemption pass (default: 7).
     preempt_period: u32 = 7,
 
     /// Next tick at which a preemption pass should run.
     next_preempt_tick: u64 = 7,
+
+    // === Timers ===
+
+    /// Pending timer entries; each entry says "wake G at deadline tick".
+    timers: std.ArrayListUnmanaged(TimerEntry) = .{},
 
     // === Mix in partials ===
 
     pub usingnamespace @import("ctor.zig").bind(Self); // initialization & destruction
     pub usingnamespace @import("basics.zig").bind(Self); // basic utilities for scheduler
     pub usingnamespace @import("pidle_ops.zig").bind(Self); // idle processor stack operations
-    pub usingnamespace @import("runq_local_ops.zig").bind(Self, WorkItem); // local run queue operations
-    pub usingnamespace @import("runq_global_ops.zig").bind(Self, WorkItem); // global run queue operations
+    pub usingnamespace @import("runq_local_ops.zig").bind(Self); // local run queue operations
+    pub usingnamespace @import("runq_global_ops.zig").bind(Self); // global run queue operations
     pub usingnamespace @import("runner.zig").bind(Self); // run & finalize goroutine execution
-    pub usingnamespace @import("steal_work.zig").bind(Self, WorkItem); // work stealing logic (steal tasks from other Ps)
-    pub usingnamespace @import("find_work.zig").bind(Self, WorkItem); // locate runnable work items
+    pub usingnamespace @import("steal_work.zig").bind(Self); // work stealing logic (steal tasks from other Ps)
+    pub usingnamespace @import("find_work.zig").bind(Self); // locate runnable work items
     pub usingnamespace @import("timer.zig").bind(Self); // scheduling timeline: tick management + periodic preemption
     pub usingnamespace @import("loop.zig").bind(Self); // main scheduling loop
     pub usingnamespace @import("display.zig").bind(Self); // display & debug utilities

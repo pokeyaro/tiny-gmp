@@ -4,11 +4,13 @@
 
 const std = @import("std");
 const tg = @import("../../tg.zig");
+const Types = @import("types.zig");
 
 // Types
 const P = tg.P;
+const WorkItem = Types.WorkItem;
 
-pub fn bind(comptime Self: type, comptime WorkItem: type) type {
+pub fn bind(comptime Self: type) type {
     return struct {
         /// Provides a method to locate the next runnable goroutine for a given processor.
         /// Search order: runnext (local) → runq (local) → global queue → stealing.
@@ -38,7 +40,7 @@ pub fn bind(comptime Self: type, comptime WorkItem: type) type {
                 if (self.debug_mode) {
                     std.debug.print(
                         "P{}: Executing G{} (from {s})\n",
-                        .{ p.getID(), wi.g.getID(), wi.src.toString() },
+                        .{ p.getID(), wi.g.getID(), wi.sourceName() },
                     );
                 }
                 self.executeGoroutine(p, wi.g);

@@ -41,12 +41,12 @@ pub fn bind(comptime Self: type) type {
 
         /// Clean up scheduler resources.
         pub fn deinit(self: *Self) void {
-            // Clean up global queue.
+            // Drain global queue.
             while (self.runq.dequeue()) |g| {
                 lifecycle.destroyproc(self, g);
             }
 
-            // Clean up processor queues.
+            // Drain all local queues (incl. runnext).
             for (self.processors) |*p| {
                 if (p.runnext) |g| {
                     lifecycle.destroyproc(self, g);
@@ -55,6 +55,16 @@ pub fn bind(comptime Self: type) type {
                     lifecycle.destroyproc(self, g);
                 }
             }
+
+            // Drain timers: destroy parked goroutines that never woke up.
+            var i: usize = 0;
+            while (i < self.timers.items.len) : (i += 1) {
+                const t = self.timers.items[i];
+                lifecycle.destroyproc(self, t.g);
+            }
+
+            // Free timer storage.
+            self.timers.deinit(self.allocator);
 
             // Original cleanup.
             self.runq.deinit();

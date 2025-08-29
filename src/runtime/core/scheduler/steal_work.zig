@@ -4,14 +4,16 @@
 
 const std = @import("std");
 const tg = @import("../../tg.zig");
+const Types = @import("types.zig");
 
 // Modules
 const random = tg.lib.algo.random;
 
 // Types
 const P = tg.P;
+const WorkItem = Types.WorkItem;
 
-pub fn bind(comptime Self: type, comptime WorkItem: type) type {
+pub fn bind(comptime Self: type) type {
     return struct {
         /// How many full rounds of victim scanning to attempt.
         ///

@@ -70,6 +70,7 @@ fn runStressTestWithCustomOutput(config: app.AppConfig, allocator: std.mem.Alloc
 
     // Start the scheduler.
     std.debug.print("\n=== Starting Scheduler ===\n", .{});
+    sched.demoParkSome(5, 10);
     sched.schedule();
 
     std.debug.print("\n=== Stress Test Completed Successfully ===\n", .{});

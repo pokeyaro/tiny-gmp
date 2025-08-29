@@ -4,12 +4,14 @@
 
 const std = @import("std");
 const tg = @import("../../tg.zig");
+const Types = @import("types.zig");
 
 // Types
 const G = tg.G;
 const P = tg.P;
+const WorkItem = Types.WorkItem;
 
-pub fn bind(comptime Self: type, comptime WorkItem: type) type {
+pub fn bind(comptime Self: type) type {
     return struct {
         /// Add a goroutine to the global run queue.
         ///
